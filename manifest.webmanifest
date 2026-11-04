@@ -1,0 +1,15 @@
+{
+  "name": "Daily English Coach",
+  "short_name": "English Coach",
+  "description": "每天 10 分鐘的職場英文口說練習",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "scope": "./",
+  "display": "browser",
+  "background_color": "#F2F4F8",
+  "theme_color": "#0A776F",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

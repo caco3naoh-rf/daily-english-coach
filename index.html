@@ -1,0 +1,2396 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- CSP：只允許連到 GitHub API、Gist 原始檔、Gemini API（SPEC v2 第 5 節）。因此不載入 Google Fonts，字型用系統字。 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src https://api.github.com https://gist.githubusercontent.com https://generativelanguage.googleapis.com; font-src 'self' data:">
+<title>Daily English Coach</title>
+<meta name="theme-color" content="#0A776F">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<style>
+/* Layout: one centered column (max 720px) of stacked cards, a fixed bottom tab bar; the streak flame and the signal-bird mascot are the only loud elements. */
+:root{
+  --bg:#F2F4F8; --surface:#FFFFFF; --surface-2:#E8ECF4; --ink:#17203A; --muted:#56617D; --line:#D3D9E6;
+  --accent:#0A776F; --accent-ink:#FFFFFF; --accent-soft:#D2EDEA;
+  --flame:#C9561A; --flame-soft:#FBE4D4;
+  --ok:#1D7F46; --ok-soft:#DDF3E5; --bad:#B3392F; --bad-soft:#F9E0DE; --warn:#8A5B00; --warn-soft:#FBEFD2;
+  --f-display:"Bricolage Grotesque","Segoe UI","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI","Microsoft JhengHei","PingFang TC","Noto Sans TC",system-ui,sans-serif;
+  --f-zh:"PingFang TC","Microsoft JhengHei","Noto Sans TC",system-ui,sans-serif;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1320; --surface:#171F31; --surface-2:#212A40; --ink:#E6EBF5; --muted:#9BA6BF; --line:#2D3750;
+    --accent:#43C3B7; --accent-ink:#04201D; --accent-soft:#16393A;
+    --flame:#FF9653; --flame-soft:#3B2415;
+    --ok:#56C784; --ok-soft:#173326; --bad:#F2776E; --bad-soft:#3A1D1C; --warn:#F0C062; --warn-soft:#352A12;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1320; --surface:#171F31; --surface-2:#212A40; --ink:#E6EBF5; --muted:#9BA6BF; --line:#2D3750;
+  --accent:#43C3B7; --accent-ink:#04201D; --accent-soft:#16393A;
+  --flame:#FF9653; --flame-soft:#3B2415;
+  --ok:#56C784; --ok-soft:#173326; --bad:#F2776E; --bad-soft:#3A1D1C; --warn:#F0C062; --warn-soft:#352A12;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:18px;line-height:1.6;overflow-x:hidden}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 120px}
+h1,h2,h3{font-family:var(--f-display);line-height:1.25;margin:0;text-wrap:balance}
+h1{font-size:26px;font-weight:800}
+h2{font-size:22px;font-weight:800}
+h3{font-size:19px;font-weight:600}
+p{margin:0}
+.stack{display:grid;gap:14px}
+.stack-s{display:grid;gap:8px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.between{justify-content:space-between}
+.muted{color:var(--muted)}
+.zh{font-family:var(--f-zh);font-size:16px;color:var(--muted)}
+.small{font-size:16px}
+.label{font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.num{font-variant-numeric:tabular-nums}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.card.flat{background:var(--surface-2);border-color:transparent}
+/* top bar */
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.brand{font-family:var(--f-display);font-weight:800;font-size:20px;display:flex;align-items:center;gap:8px}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:14px;padding:4px 10px;border-radius:999px;background:var(--surface-2);color:var(--muted);font-weight:700;white-space:nowrap}
+.pill.on{background:var(--accent-soft);color:var(--accent)}
+.pill.err{background:var(--bad-soft);color:var(--bad)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+/* buttons */
+.btn{min-height:48px;padding:0 18px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-weight:700;font-size:17px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center;line-height:1.2}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.flame{background:var(--flame);color:#fff;border-color:transparent}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--accent)}
+.btn.sm{min-height:44px;padding:0 12px;font-size:16px}
+.btn.block{width:100%}
+.btn.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.btn.rec{background:var(--bad);color:#fff;border-color:transparent}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,.navb:focus-visible,.cal button:focus-visible,.chip:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.chip{min-height:44px;padding:6px 12px;border-radius:12px;border:1px dashed var(--accent);background:transparent;color:var(--ink);font:inherit;font-size:16px;cursor:pointer;text-align:left;line-height:1.35}
+.chip.used{border-style:solid;background:var(--ok-soft);border-color:var(--ok)}
+textarea,input[type=text],select{width:100%;font:inherit;font-size:18px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+textarea{min-height:84px;resize:vertical}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px}
+/* hero */
+.hero{display:grid;grid-template-columns:118px 1fr;gap:16px;align-items:center}
+.mascot svg{width:100%;height:auto;display:block}
+.streak{font-family:var(--f-display);font-weight:800;font-size:56px;line-height:1;color:var(--flame);font-variant-numeric:tabular-nums;display:flex;align-items:baseline;gap:8px}
+.streak small{font-size:18px;color:var(--muted);font-family:var(--f-body);font-weight:700}
+.freeze{display:inline-flex;gap:4px;align-items:center}
+.lvbar{height:8px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.lvbar i{display:block;height:100%;background:var(--flame);border-radius:99px}
+.note{padding:12px 14px;border-radius:12px;font-size:17px}
+.note.info{background:var(--accent-soft)}
+.note.warn{background:var(--warn-soft);color:var(--ink)}
+.note.bad{background:var(--bad-soft)}
+.note.ok{background:var(--ok-soft)}
+/* today card */
+.today{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:start}
+.tag{display:inline-block;font-size:14px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--surface-2);color:var(--muted)}
+.steps{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.steps li{display:flex;gap:10px;align-items:center;font-size:17px}
+.steps .ck{width:26px;height:26px;border-radius:50%;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;flex:none;font-size:14px;font-weight:800;color:var(--muted)}
+.steps .done .ck{background:var(--ok);border-color:var(--ok);color:#fff}
+.ring{width:84px;height:84px}
+.ring circle{fill:none;stroke-width:9}
+.ring .bgc{stroke:var(--surface-2)}
+.ring .fgc{stroke:var(--accent);stroke-linecap:round;transition:stroke-dashoffset .8s ease}
+.ring text{fill:var(--ink);font-family:var(--f-display);font-weight:800;font-size:22px}
+/* calendar */
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px}
+.cal .wd{text-align:center;font-size:14px;color:var(--muted);font-weight:700}
+.cal button{aspect-ratio:1;max-width:100%;min-height:40px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:15px;cursor:pointer;padding:0;font-variant-numeric:tabular-nums}
+.cal button.done{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
+.cal button.frozen{background:var(--accent);color:var(--accent-ink);opacity:.42;border-color:transparent}
+.cal button.part{background:var(--accent-soft)}
+.cal button.today{outline:3px solid var(--flame);outline-offset:-1px}
+.cal button.fut{color:var(--muted);background:transparent}
+.cal button.sel{box-shadow:0 0 0 3px var(--ink) inset}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:15px;color:var(--muted)}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;vertical-align:-2px;margin-right:4px}
+/* lesson */
+.stepper{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.stepper button{min-height:56px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:inherit;font-size:14px;font-weight:700;cursor:pointer;padding:4px 2px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stepper button.cur{border:2px solid var(--accent);color:var(--ink)}
+.stepper button.done{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.chunk-en{font-family:var(--f-display);font-size:22px;font-weight:800;line-height:1.3}
+.ex{font-size:18px}
+.big-en{font-size:22px;font-weight:700;line-height:1.4}
+.timer{height:6px;border-radius:99px;background:var(--surface-2);overflow:hidden}
+.timer i{display:block;height:100%;background:var(--flame);width:100%;animation:shrink 8s linear forwards}
+@keyframes shrink{to{width:0}}
+.res{padding:12px 14px;border-radius:12px}
+.res.ok{background:var(--ok-soft)}
+.res.no{background:var(--warn-soft)}
+.rounds{display:flex;gap:6px}
+.rounds span{flex:1;height:6px;border-radius:99px;background:var(--surface-2)}
+.rounds span.on{background:var(--accent)}
+/* chat */
+.chat{display:flex;flex-direction:column;gap:10px}
+.msg{max-width:88%;padding:10px 14px;border-radius:16px;font-size:18px;min-width:0;overflow-wrap:anywhere}
+.msg.partner{background:var(--surface-2);align-self:flex-start;border-bottom-left-radius:4px}
+.msg.me{background:var(--accent-soft);align-self:flex-end;border-bottom-right-radius:4px}
+.fix{align-self:flex-end;max-width:88%;font-size:16px;background:var(--warn-soft);border-radius:12px;padding:8px 12px;min-width:0}
+.fix s{color:var(--bad)}
+.fix b{color:var(--ok)}
+.thinking{align-self:flex-start;color:var(--muted);font-style:italic}
+.who{font-size:14px;color:var(--muted);font-weight:700;margin-bottom:2px}
+/* done */
+.celebrate{text-align:center;display:grid;gap:12px;justify-items:center}
+.celebrate .mascot{width:150px}
+.bump{animation:bump .9s cubic-bezier(.3,1.6,.5,1) 1}
+@keyframes bump{0%{transform:scale(.4)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.hop{animation:hop 1s ease 2}
+@keyframes hop{0%,100%{transform:translateY(0)}40%{transform:translateY(-16px)}}
+/* grids */
+.stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.stat{background:var(--surface-2);border-radius:12px;padding:12px}
+.stat b{display:block;font-family:var(--f-display);font-size:30px;font-variant-numeric:tabular-nums}
+.badges{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.badge{border-radius:12px;padding:12px;background:var(--surface-2);font-size:16px;min-width:0}
+.badge.got{background:var(--flame-soft)}
+.badge.lock{opacity:.55}
+.levels{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.levels div{text-align:center;font-size:13px;color:var(--muted);min-width:0}
+.levels div.lock svg{filter:grayscale(1);opacity:.35}
+.match{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.match button{min-height:56px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:inherit;font-size:16px;padding:8px;cursor:pointer;line-height:1.3;min-width:0;overflow-wrap:anywhere}
+.match button.sel{border:2px solid var(--accent)}
+.match button.ok{background:var(--ok-soft);border-color:transparent;color:var(--ok)}
+.match button.bad{background:var(--bad-soft)}
+.list{display:grid;gap:8px}
+.li{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.li > div{min-width:0}
+/* nav */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.nav-in{max-width:720px;margin:0 auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
+.navb{min-height:62px;border:0;background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer}
+.navb.act{color:var(--accent)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));z-index:30;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:16px;max-width:calc(100% - 32px);box-shadow:0 6px 20px rgba(0,0,0,.25)}
+.share{width:100%;font-size:16px;min-height:70px}
+@media (max-width:420px){
+  .hero{grid-template-columns:96px 1fr;gap:12px}
+  .streak{font-size:48px}
+  .ring{width:70px;height:70px}
+}
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important}
+}
+/* v2：錄音中、聽力模糊字卡、連線設定 */
+.btn.rec{animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(179,57,47,.55)}50%{box-shadow:0 0 0 10px rgba(179,57,47,0)}}
+.live{font-size:16px;padding:8px 12px;border-radius:10px;background:var(--bad-soft);color:var(--ink);display:flex;gap:8px;align-items:center}
+.live .rdot{width:10px;height:10px;border-radius:50%;background:var(--bad);flex:none;animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:.2}}
+.veil{filter:blur(7px);cursor:pointer;user-select:none;-webkit-user-select:none}
+.veil-hint{display:block;font-size:14px;color:var(--muted);font-weight:700}
+input[type=password]{width:100%;font:inherit;font-size:18px;padding:12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+.conn{display:grid;gap:8px;padding:12px;border-radius:12px;background:var(--surface-2)}
+@media (prefers-reduced-motion: reduce){ .btn.rec,.live .rdot{animation:none!important} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span id="brandBird" aria-hidden="true" style="width:32px;display:inline-block"></span>Daily English Coach</div>
+    <div class="row" style="gap:6px">
+      <span id="aiPill" class="pill"><span class="dot"></span><span>自評模式</span></span>
+      <span id="syncPill" class="pill"><span class="dot"></span><span>本機</span></span>
+    </div>
+  </header>
+  <main id="main" aria-live="polite"></main>
+</div>
+<nav class="nav" aria-label="主要分頁">
+  <div class="nav-in" id="nav"></div>
+</nav>
+<div id="toast" class="toast" hidden></div>
+
+<!-- ============================================================
+     dec-core：純邏輯（不碰 DOM）。打卡、凍結卡、等級、SRS、合併。
+     tests/logic.test.mjs 會把這一段原樣抽出來在 node 的 vm 裡跑。
+     ============================================================ -->
+<script id="dec-core">
+var DEC = (function () {
+  'use strict';
+  // 吉祥物 10 級的累計完成天數門檻（SPEC 第 3 節）
+  var LEVELS = [1, 3, 7, 14, 21, 30, 45, 60, 90, 120];
+  var FREEZE_EVERY = 7;   // 每連續 7 天得 1 張凍結卡
+  var FREEZE_MAX = 2;     // 最多存 2 張
+  var STREAK_BADGES = [7, 30, 100, 365];
+  var STEPS = ['warm', 'learn', 'practice', 'apply'];
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  // 裝置本地日期（不用 toISOString，那是 UTC）
+  function localDateStr(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function isDateStr(s) { return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s); }
+  // 日期字串 <-> 天數序號，只用 UTC 運算避免時區與夏令時間干擾
+  function dayNum(s) { var p = s.split('-'); return Math.round(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 86400000); }
+  function fromDayNum(n) {
+    var d = new Date(n * 86400000);
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
+  }
+  function addDays(s, n) { return fromDayNum(dayNum(s) + n); }
+  function diffDays(a, b) { return dayNum(b) - dayNum(a); } // b 減 a
+  function weekday(s) { return new Date(dayNum(s) * 86400000).getUTCDay(); } // 0=日
+  function isWeekend(s) { var w = weekday(s); return w === 0 || w === 6; }
+  function clone(o) { return o == null ? o : JSON.parse(JSON.stringify(o)); }
+  function nonNeg(x) { return (typeof x === 'number' && isFinite(x) && x > 0) ? Math.floor(x) : 0; }
+
+  function levelFor(totalDays) {
+    var l = 0;
+    for (var i = 0; i < LEVELS.length; i++) if (totalDays >= LEVELS[i]) l = i + 1;
+    return l;
+  }
+  function nextLevelInfo(totalDays) {
+    var l = levelFor(totalDays);
+    if (l >= LEVELS.length) return { level: l, next: null, daysLeft: 0, from: LEVELS[l - 1], to: LEVELS[l - 1] };
+    return { level: l, next: l + 1, daysLeft: LEVELS[l] - totalDays, from: l ? LEVELS[l - 1] : 0, to: LEVELS[l] };
+  }
+
+  function defaultProfile() {
+    return { streak: 0, longest: 0, freezes: 0, lastDone: '', totalDays: 0, level: 0, badges: [],
+      settings: { voice: '', speed: 1.0, mode: 'voice' }, updatedAt: '' };
+  }
+  // 把任何來源（localStorage、db、舊版）讀到的 profile 整理成固定形狀
+  function normalizeProfile(p) {
+    p = (p && typeof p === 'object') ? p : {};
+    var s = (p.settings && typeof p.settings === 'object') ? p.settings : {};
+    var out = {
+      streak: nonNeg(p.streak), longest: nonNeg(p.longest),
+      freezes: Math.min(FREEZE_MAX, nonNeg(p.freezes)),
+      lastDone: isDateStr(p.lastDone) ? p.lastDone : '',
+      totalDays: nonNeg(p.totalDays), level: 0,
+      badges: Array.isArray(p.badges) ? p.badges.filter(function (b) { return typeof b === 'string'; }) : [],
+      settings: { voice: typeof s.voice === 'string' ? s.voice : '', speed: s.speed === 0.8 ? 0.8 : 1.0, mode: s.mode === 'text' ? 'text' : 'voice' },
+      updatedAt: typeof p.updatedAt === 'string' ? p.updatedAt : ''
+    };
+    out.longest = Math.max(out.longest, out.streak);
+    out.level = levelFor(out.totalDays);
+    return out;
+  }
+
+  // 首頁用：今天打開時的連續狀態（不改資料）
+  //   new     從沒完成過
+  //   done    今天已完成
+  //   pending 昨天有完成，今天還沒
+  //   freeze  漏的天數 ≤ 手上的凍結卡（最多 2 張補 2 天）：今天完成會自動用掉 missed 張
+  //   broken  漏的天數比凍結卡多：今天完成從 1 重來
+  function streakStatus(p, today) {
+    p = normalizeProfile(p);
+    if (!p.lastDone) return { state: 'new', effective: 0, missed: 0 };
+    var gap = diffDays(p.lastDone, today);
+    if (gap <= 0) return { state: 'done', effective: p.streak, missed: 0 };
+    if (gap === 1) return { state: 'pending', effective: p.streak, missed: 0 };
+    var missed = gap - 1;
+    if (missed <= p.freezes) return { state: 'freeze', effective: p.streak, missed: missed };
+    return { state: 'broken', effective: 0, missed: missed };
+  }
+
+  function addBadge(p, id, list) {
+    if (p.badges.indexOf(id) < 0) { p.badges.push(id); if (list) list.push(id); return true; }
+    return false;
+  }
+
+  // 打卡：完成 Apply 的那一刻呼叫。回傳新 profile 與事件（給完成畫面顯示）。
+  function computeCheckIn(profile, today) {
+    var p = normalizeProfile(profile);
+    var np = clone(p);
+    var ev = { already: false, freezeUsed: 0, frozenDates: [], broke: false, earnedFreeze: false,
+      levelUp: false, prevLevel: p.level, newBadges: [] };
+    if (p.lastDone && diffDays(p.lastDone, today) <= 0) { ev.already = true; return { profile: np, events: ev }; }
+    var st = streakStatus(p, today);
+    if (st.state === 'new') {
+      np.streak = 1;
+    } else if (st.state === 'broken') {
+      ev.broke = true; np.streak = 1;              // 斷掉從 1 重來，longest 保留
+    } else if (st.state === 'freeze') {
+      np.freezes = p.freezes - st.missed; ev.freezeUsed = st.missed;
+      ev.frozenDates = [];                         // 被凍結卡補起來的那幾天（由舊到新）
+      for (var m = st.missed; m >= 1; m--) ev.frozenDates.push(addDays(today, -m));
+      np.streak = p.streak + 1;
+    } else { // pending
+      np.streak = p.streak + 1;
+    }
+    if (np.streak % FREEZE_EVERY === 0 && np.freezes < FREEZE_MAX) { np.freezes += 1; ev.earnedFreeze = true; }
+    np.longest = Math.max(p.longest, np.streak);
+    np.lastDone = today;
+    np.totalDays = p.totalDays + 1;
+    np.level = levelFor(np.totalDays);
+    ev.levelUp = np.level > p.level;
+    for (var i = 0; i < STREAK_BADGES.length; i++) if (np.streak >= STREAK_BADGES[i]) addBadge(np, 'd' + STREAK_BADGES[i], ev.newBadges);
+    return { profile: np, events: ev };
+  }
+
+  // ---- 每日紀錄 days/<date> ----
+  function newDay(scenarioId) {
+    return { scenarioId: scenarioId || '', steps: { warm: false, learn: false, practice: false, apply: false },
+      score: 0, minutes: 0, frozen: false, summary: '' };
+  }
+  function normalizeDay(d) {
+    d = (d && typeof d === 'object') ? d : {};
+    var out = newDay(typeof d.scenarioId === 'string' ? d.scenarioId : '');
+    var st = (d.steps && typeof d.steps === 'object') ? d.steps : {};
+    STEPS.forEach(function (k) { out.steps[k] = st[k] === true; });
+    out.score = nonNeg(d.score); out.minutes = nonNeg(d.minutes);
+    out.frozen = d.frozen === true && !out.steps.apply;
+    out.summary = typeof d.summary === 'string' ? d.summary : '';
+    if (typeof d.title === 'string') out.title = d.title;
+    if (d.custom && typeof d.custom === 'object') out.custom = clone(d.custom);
+    return out;
+  }
+  function stepCount(d) { var n = 0; STEPS.forEach(function (k) { if (d.steps[k]) n++; }); return n; }
+  function mergeDay(a, b) {
+    if (!a) return normalizeDay(b);
+    if (!b) return normalizeDay(a);
+    a = normalizeDay(a); b = normalizeDay(b);
+    var base = stepCount(b) > stepCount(a) ? b : a;  // 進度多的那邊決定情境
+    var out = clone(base);
+    STEPS.forEach(function (k) { out.steps[k] = a.steps[k] || b.steps[k]; });
+    out.score = Math.max(a.score, b.score);
+    out.minutes = Math.max(a.minutes, b.minutes);
+    out.summary = base.summary || a.summary || b.summary;
+    out.frozen = (a.frozen || b.frozen) && !out.steps.apply; // 有完成就不是凍結
+    return out;
+  }
+
+  // ---- 複習庫 chunks/<id> 與 SRS（簡化 SM-2）----
+  function newChunk(c, src, today) {
+    return { en: String(c.en || ''), zh: String(c.zh || ''), ex: String(c.ex || ''), src: String(src || ''),
+      srs: { ease: 2.5, interval: 1, due: addDays(today, 1), reps: 0 } };
+  }
+  function srsUpdate(chunk, ok, today) {
+    var c = clone(chunk) || {};
+    var s = c.srs || { ease: 2.5, interval: 1, due: today, reps: 0 };
+    var ease = (typeof s.ease === 'number' && s.ease >= 1.3) ? s.ease : 2.5;
+    var interval = (typeof s.interval === 'number' && s.interval >= 1) ? s.interval : 1;
+    var reps = nonNeg(s.reps);
+    if (ok) {
+      reps += 1;
+      interval = Math.max(interval + 1, Math.round(interval * ease)); // 答對：interval × ease，至少 +1
+    } else {
+      reps = 0; interval = 1; ease = Math.max(1.3, Math.round((ease - 0.2) * 100) / 100); // 答錯：回 1 天
+    }
+    c.srs = { ease: ease, interval: interval, due: addDays(today, interval), reps: reps };
+    return c;
+  }
+  function pickDue(chunks, today, n) {
+    return Object.keys(chunks || {}).filter(function (id) {
+      var s = chunks[id] && chunks[id].srs; return s && isDateStr(s.due) && s.due <= today;
+    }).sort(function (x, y) {
+      var a = chunks[x].srs.due, b = chunks[y].srs.due; return a < b ? -1 : a > b ? 1 : (x < y ? -1 : 1);
+    }).slice(0, n);
+  }
+  function mergeChunk(a, b) {
+    if (!a) return clone(b);
+    if (!b) return clone(a);
+    var da = (a.srs && a.srs.due) || '', db = (b.srs && b.srs.due) || '';
+    if (da !== db) return clone(da > db ? a : b);           // due 較新的那份
+    return clone(((a.srs && a.srs.reps) || 0) >= ((b.srs && b.srs.reps) || 0) ? a : b);
+  }
+
+  // ---- 本機與雲端合併：讀 → 合併 → 寫 ----
+  // bundle = { profile, days:{date:day}, chunks:{id:chunk} }
+  function mergeProfiles(local, remote) {
+    local = local || {}; remote = remote || {};
+    var a = normalizeProfile(local.profile), b = normalizeProfile(remote.profile);
+    var p = normalizeProfile({});
+    var later = a.lastDone >= b.lastDone ? a : b;
+    p.lastDone = later.lastDone;
+    // streak 取大；但若一邊較新且已經斷掉重來，舊裝置上的大數字是過期資料，以較新的為準
+    if (a.lastDone === b.lastDone) { p.streak = Math.max(a.streak, b.streak); p.freezes = Math.max(a.freezes, b.freezes); }
+    else { p.streak = later.streak; p.freezes = later.freezes; }
+    p.longest = Math.max(a.longest, b.longest, p.streak);
+    var bySettings = (a.updatedAt || '') >= (b.updatedAt || '') ? a : b;
+    p.settings = clone(bySettings.settings);
+    p.updatedAt = bySettings.updatedAt;
+    p.badges = a.badges.slice();
+    b.badges.forEach(function (x) { if (p.badges.indexOf(x) < 0) p.badges.push(x); });
+    var days = {};
+    var ld = local.days || {}, rd = remote.days || {};
+    Object.keys(ld).concat(Object.keys(rd)).forEach(function (k) {
+      if (!isDateStr(k) || days[k]) return;
+      days[k] = mergeDay(ld[k], rd[k]);
+    });
+    var doneCount = Object.keys(days).filter(function (k) { return days[k].steps.apply; }).length;
+    p.totalDays = Math.max(a.totalDays, b.totalDays, doneCount);
+    p.level = levelFor(p.totalDays);
+    var chunks = {};
+    var lc = local.chunks || {}, rc = remote.chunks || {};
+    Object.keys(lc).concat(Object.keys(rc)).forEach(function (k) {
+      if (chunks[k]) return;
+      chunks[k] = mergeChunk(lc[k], rc[k]);
+    });
+    return { profile: p, days: days, chunks: chunks };
+  }
+
+  function libraryBadges(p, chunkCount) {
+    var np = clone(p), got = [];
+    if (chunkCount >= 50) addBadge(np, 'lib50', got);
+    return { profile: np, newBadges: got };
+  }
+
+  // 平日抽職場、週末抽日常；offset 給「換一個」用
+  function pickScenario(lib, dateStr, offset) {
+    var type = isWeekend(dateStr) ? 'daily' : 'work';
+    var list = lib.filter(function (s) { return s.type === type; });
+    if (!list.length) list = lib;
+    var i = ((dayNum(dateStr) + (offset || 0)) % list.length + list.length) % list.length;
+    return list[i];
+  }
+
+  // ---- 文字比對（跟讀、默寫、偵測有沒有用到 chunk）----
+  function norm(t) {
+    return String(t || '').toLowerCase().replace(/[‘’]/g, "'").replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  function wordSimilarity(a, b) {
+    var x = norm(a).split(' ').filter(Boolean), y = norm(b).split(' ').filter(Boolean);
+    if (!x.length || !y.length) return 0;
+    var dp = [], i, j;
+    for (i = 0; i <= x.length; i++) { dp.push(new Array(y.length + 1).fill(0)); }
+    for (i = 1; i <= x.length; i++) for (j = 1; j <= y.length; j++)
+      dp[i][j] = x[i - 1] === y[j - 1] ? dp[i - 1][j - 1] + 1 : Math.max(dp[i - 1][j], dp[i][j - 1]);
+    return Math.round(200 * dp[x.length][y.length] / (x.length + y.length));
+  }
+  function chunkUsed(text, en) {
+    var t = ' ' + norm(text) + ' ';
+    var parts = String(en || '').split(/…|\.\.\.|,/).map(norm).filter(function (s) { return s.length > 2; });
+    if (!parts.length) return false;
+    return parts.every(function (s) { return t.indexOf(' ' + s + ' ') >= 0 || t.indexOf(' ' + s) >= 0; });
+  }
+
+  // ---- AI 回覆的形狀檢查（模型回的 JSON 不保證形狀，要自己驗）----
+  function str(x, max) { return typeof x === 'string' ? x.slice(0, max || 600) : ''; }
+  function validateJudge(o) {
+    if (!o || typeof o !== 'object' || typeof o.ok !== 'boolean') return null;
+    return { ok: o.ok, better: str(o.better, 300), note_zh: str(o.note_zh, 200) };
+  }
+  // learnerText：學習者原句；AI 偶爾會回「修正」但 fixed 跟原句一樣，那不算修正
+  function validateTurn(o, learnerText) {
+    if (!o || typeof o !== 'object' || typeof o.reply !== 'string' || !o.reply.trim()) return null;
+    var c = o.correction, corr = null;
+    if (c && typeof c === 'object' && c.has === true && str(c.fixed)) {
+      var same = norm(c.fixed) === norm(c.original) || (learnerText && norm(c.fixed) === norm(learnerText));
+      if (!same) corr = { has: true, original: str(c.original), fixed: str(c.fixed), why_zh: str(c.why_zh, 200) };
+    }
+    var sug = Array.isArray(o.suggestions) ? o.suggestions.filter(function (s) { return typeof s === 'string' && s.trim(); }).slice(0, 2).map(function (s) { return s.slice(0, 200); }) : [];
+    return { reply: str(o.reply, 800), correction: corr, suggestions: sug, done: o.done === true };
+  }
+  function validateSummary(o) {
+    if (!o || typeof o !== 'object') return null;
+    var arr = function (a, n) { return Array.isArray(a) ? a.filter(function (s) { return typeof s === 'string'; }).slice(0, n).map(function (s) { return s.slice(0, 300); }) : []; };
+    var sc = Math.round(Number(o.score));
+    if (!(sc >= 1 && sc <= 5)) sc = 3;
+    return { good: arr(o.good, 3), improve: arr(o.improve, 2), chunks_used: arr(o.chunks_used, 8), score: sc };
+  }
+  function validateScenario(o, id) {
+    if (!o || typeof o !== 'object') return null;
+    var chunks = Array.isArray(o.chunks) ? o.chunks.filter(function (c) { return c && str(c.en) && str(c.zh); }).slice(0, 4) : [];
+    var drills = Array.isArray(o.drills) ? o.drills.filter(function (d) { return d && str(d.zh) && str(d.en); }).slice(0, 4) : [];
+    var r = o.roleplay || {};
+    if (chunks.length < 3 || drills.length < 3 || !str(r.opening) || !str(r.partner)) return null;
+    return {
+      id: id, type: 'custom', title: str(o.title, 80) || 'Custom scenario', titleZh: str(o.titleZh, 40) || '自訂情境', level: 'B1-B2',
+      chunks: chunks.map(function (c) { return { en: str(c.en, 120), zh: str(c.zh, 80), ex: str(c.ex, 240) }; }),
+      drills: drills.map(function (d) { return { zh: str(d.zh, 120), hint: str(d.hint, 60), en: str(d.en, 240) }; }),
+      roleplay: { partner: str(r.partner, 160), opening: str(r.opening, 300),
+        goals: (Array.isArray(r.goals) ? r.goals : []).filter(function (g) { return typeof g === 'string'; }).slice(0, 3).map(function (g) { return g.slice(0, 80); }),
+        followups: (Array.isArray(r.followups) ? r.followups : []).filter(function (g) { return typeof g === 'string'; }).slice(0, 3).map(function (g) { return g.slice(0, 200); }) }
+    };
+  }
+
+  // ================= v2：設定、Gemini、Gist 的純函式（不碰網路與 DOM，logic.test 測得到） =================
+
+  // 這台裝置的連線設定（localStorage dec_v1_cfg，不同步到 Gist）
+  function normalizeCfg(c) {
+    c = (c && typeof c === 'object') ? c : {};
+    var s = function (x) { return typeof x === 'string' ? x.trim().slice(0, 300) : ''; };
+    return { geminiKey: s(c.geminiKey), githubToken: s(c.githubToken), gistId: /^[0-9a-f]{1,64}$/i.test(s(c.gistId)) ? s(c.gistId) : '',
+      model: MODEL_CHOICES.indexOf(c.model) >= 0 ? c.model : MODEL_CHOICES[0],
+      autoSpeak: c.autoSpeak !== false, listenFirst: c.listenFirst === true };
+  }
+
+  // Gemini 模型對應（要換模型只改這裡；2026-11-04 總監依官方模型頁定案）
+  var MODELS = { quick: 'gemini-3.5-flash-lite', 'default': 'gemini-3.6-flash', complex: 'gemini-3.6-flash' };
+  // 「我」的「AI 模型」下拉可選的值（第一個是預設）；選了只取代 default／complex，quick 固定用 flash-lite
+  var MODEL_CHOICES = ['gemini-3.6-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'];
+  function geminiModel(tier, chosen) {
+    if (tier === 'quick') return MODELS.quick;
+    return MODEL_CHOICES.indexOf(chosen) >= 0 ? chosen : MODELS['default'];
+  }
+  function geminiUrl(tier, chosen) { return 'https://generativelanguage.googleapis.com/v1beta/models/' + geminiModel(tier, chosen) + ':generateContent'; }
+
+  // 呼叫端的 input：字串 → 一個 user turn；turns 陣列 → contents（assistant 改叫 model）
+  function toGeminiContents(input) {
+    if (typeof input === 'string') return [{ role: 'user', parts: [{ text: input }] }];
+    if (!Array.isArray(input)) return [];
+    return input.map(function (t) {
+      var c = t && t.content;
+      return { role: t && (t.role === 'assistant' || t.role === 'model') ? 'model' : 'user',
+        parts: [{ text: typeof c === 'string' ? c : JSON.stringify(c == null ? '' : c) }] };
+    });
+  }
+  function geminiRequestBody(input) {
+    return { contents: toGeminiContents(input), generationConfig: { responseMimeType: 'application/json', temperature: 0.7 } };
+  }
+  // 模型偶爾會用 ```json … ``` 把 JSON 包起來，先剝掉
+  function stripJsonFence(t) {
+    t = String(t == null ? '' : t).trim();
+    var m = /^```[a-zA-Z]*\s*\n?([\s\S]*?)\n?```$/.exec(t);
+    return (m ? m[1] : t).trim();
+  }
+  // generateContent 的回應 → {ok:true, value} 或 {ok:false, code}
+  function parseGeminiResponse(j) {
+    if (!j || typeof j !== 'object') return { ok: false, code: 'invalid_json' };
+    if (j.promptFeedback && j.promptFeedback.blockReason) return { ok: false, code: 'refused' };
+    var c = Array.isArray(j.candidates) ? j.candidates[0] : null;
+    if (!c) return { ok: false, code: 'empty_completion' };
+    if (c.finishReason === 'SAFETY' || c.finishReason === 'PROHIBITED_CONTENT' || c.finishReason === 'BLOCKLIST') return { ok: false, code: 'refused' };
+    var parts = (c.content && Array.isArray(c.content.parts)) ? c.content.parts : [];
+    var text = parts.map(function (p) { return (p && typeof p.text === 'string' && !p.thought) ? p.text : ''; }).join('');
+    if (!text.trim()) return { ok: false, code: 'empty_completion' };
+    try { return { ok: true, value: JSON.parse(stripJsonFence(text)) }; }
+    catch (e) { return { ok: false, code: 'invalid_json' }; }
+  }
+  // HTTP 錯誤 → 錯誤碼（SPEC v2 第 2 節）
+  function geminiErrorCode(status, bodyText) {
+    var b = String(bodyText || '');
+    if (status === 429) return 'rate_limited';
+    if (status === 401 || status === 403) return 'bad_key';
+    if (status === 400 && /API_KEY_INVALID|API key not valid|API_KEY/i.test(b)) return 'bad_key';
+    return 'upstream_error';
+  }
+
+  // ---- Gist：一個檔 daily-english-coach.json ----
+  var GIST_FILE = 'daily-english-coach.json';
+  var BAD_KEYS = ['__proto__', 'constructor', 'prototype'];
+  function normalizeChunk(c) {
+    if (!c || typeof c !== 'object' || typeof c.en !== 'string' || !c.en.trim()) return null;
+    var s = (c.srs && typeof c.srs === 'object') ? c.srs : {};
+    return { en: c.en.slice(0, 200), zh: typeof c.zh === 'string' ? c.zh.slice(0, 200) : '', ex: typeof c.ex === 'string' ? c.ex.slice(0, 400) : '',
+      src: typeof c.src === 'string' ? c.src.slice(0, 80) : '',
+      srs: { ease: (typeof s.ease === 'number' && isFinite(s.ease) && s.ease >= 1.3) ? Math.min(s.ease, 5) : 2.5,
+        interval: (typeof s.interval === 'number' && isFinite(s.interval) && s.interval >= 1) ? Math.min(Math.round(s.interval), 3650) : 1,
+        due: isDateStr(s.due) ? s.due : '', reps: nonNeg(s.reps) } };
+  }
+  // Gist 檔內容（或任何來源的 bundle）→ 固定形狀 {profile, days, chunks}。Gist 不是可信輸入，一律走這裡。
+  function normalizeBundle(o) {
+    o = (o && typeof o === 'object' && !Array.isArray(o)) ? o : {};
+    var days = {}, chunks = {};
+    var rd = (o.days && typeof o.days === 'object') ? o.days : {};
+    Object.keys(rd).forEach(function (k) { if (isDateStr(k)) days[k] = normalizeDay(rd[k]); });
+    var rc = (o.chunks && typeof o.chunks === 'object') ? o.chunks : {};
+    Object.keys(rc).forEach(function (k) {
+      if (BAD_KEYS.indexOf(k) >= 0 || k.length > 120) return;
+      var c = normalizeChunk(rc[k]); if (c) chunks[k] = c;
+    });
+    return { profile: normalizeProfile(o.profile), days: days, chunks: chunks };
+  }
+  function makeGistFile(bundle, nowIso) {
+    var b = normalizeBundle(bundle);
+    return { v: 1, profile: b.profile, days: b.days, chunks: b.chunks, updatedAt: String(nowIso || '') };
+  }
+  // 鍵的順序不影響的 JSON（比較「合併結果跟遠端是否不同」用）
+  function stableStringify(x) {
+    if (x === null || typeof x !== 'object') return JSON.stringify(x);
+    if (Array.isArray(x)) return '[' + x.map(stableStringify).join(',') + ']';
+    return '{' + Object.keys(x).sort().filter(function (k) { return x[k] !== undefined; }).map(function (k) { return JSON.stringify(k) + ':' + stableStringify(x[k]); }).join(',') + '}';
+  }
+  function sameBundle(a, b) { return stableStringify(normalizeBundle(a)) === stableStringify(normalizeBundle(b)); }
+  // GET /gists 的列表 → 第一個含 daily-english-coach.json 的 gist id
+  function findGistId(list, filename) {
+    filename = filename || GIST_FILE;
+    if (!Array.isArray(list)) return '';
+    for (var i = 0; i < list.length; i++) {
+      var g = list[i];
+      if (g && typeof g.id === 'string' && g.files && typeof g.files === 'object' && Object.prototype.hasOwnProperty.call(g.files, filename)) return g.id;
+    }
+    return '';
+  }
+  // GET /gists/:id 的回應 → 檔案資訊（沒有這個檔回 null）
+  function gistFileInfo(gist, filename) {
+    filename = filename || GIST_FILE;
+    var f = gist && gist.files && Object.prototype.hasOwnProperty.call(gist.files, filename) ? gist.files[filename] : null;
+    if (!f || typeof f !== 'object') return null;
+    return { content: typeof f.content === 'string' ? f.content : '', truncated: f.truncated === true,
+      rawUrl: typeof f.raw_url === 'string' ? f.raw_url : '' };
+  }
+
+  return {
+    normalizeCfg: normalizeCfg, MODELS: MODELS, MODEL_CHOICES: MODEL_CHOICES, geminiModel: geminiModel, geminiUrl: geminiUrl, toGeminiContents: toGeminiContents,
+    geminiRequestBody: geminiRequestBody, stripJsonFence: stripJsonFence, parseGeminiResponse: parseGeminiResponse, geminiErrorCode: geminiErrorCode,
+    GIST_FILE: GIST_FILE, normalizeChunk: normalizeChunk, normalizeBundle: normalizeBundle, makeGistFile: makeGistFile,
+    stableStringify: stableStringify, sameBundle: sameBundle, findGistId: findGistId, gistFileInfo: gistFileInfo,
+    LEVELS: LEVELS, FREEZE_EVERY: FREEZE_EVERY, FREEZE_MAX: FREEZE_MAX, STEPS: STEPS,
+    localDateStr: localDateStr, isDateStr: isDateStr, addDays: addDays, diffDays: diffDays, weekday: weekday, isWeekend: isWeekend,
+    levelFor: levelFor, nextLevelInfo: nextLevelInfo, defaultProfile: defaultProfile, normalizeProfile: normalizeProfile,
+    streakStatus: streakStatus, computeCheckIn: computeCheckIn, newDay: newDay, normalizeDay: normalizeDay, mergeDay: mergeDay,
+    newChunk: newChunk, srsUpdate: srsUpdate, pickDue: pickDue, mergeChunk: mergeChunk, mergeProfiles: mergeProfiles,
+    libraryBadges: libraryBadges, addBadge: addBadge, pickScenario: pickScenario,
+    wordSimilarity: wordSimilarity, chunkUsed: chunkUsed,
+    validateJudge: validateJudge, validateTurn: validateTurn, validateSummary: validateSummary, validateScenario: validateScenario
+  };
+})();
+if (typeof window !== 'undefined') window.DEC = DEC;
+</script>
+
+<!-- ============================================================
+     dec-lib：內建情境庫 24 個（職場 16、日常 8）。情境 id 發布後不可改。
+     每個情境：4 chunks {en,zh,ex}、4 drills {zh,hint,en}、roleplay。
+     drills.en 是參考答案（自評模式與 Practice 第 2、3 輪用），roleplay.followups 是自評模式的對話腳本。
+     ============================================================ -->
+<script id="dec-lib">
+var DEC_LIB = (function () {
+  'use strict';
+  function sc(id, type, title, titleZh, chunks, drills, partner, opening, goals, followups) {
+    return { id: id, type: type, title: title, titleZh: titleZh, level: 'B1-B2',
+      chunks: chunks.map(function (c) { return { en: c[0], zh: c[1], ex: c[2] }; }),
+      drills: drills.map(function (d) { return { zh: d[0], hint: d[1], en: d[2] }; }),
+      roleplay: { partner: partner, opening: opening, goals: goals, followups: followups } };
+  }
+  return [
+  // ---------------- 職場 16 ----------------
+  sc("wk-weekly-update", "work", "Weekly status update", "週會進度報告",
+    [["Let me walk you through…", "讓我帶大家看一下…", "Let me walk you through this week's roaming test results."],
+     ["We're on track for…", "我們按進度可以在…完成", "We're on track for the beta release at the end of the month."],
+     ["The main blocker is…", "目前主要卡住的是…", "The main blocker is the firmware fix from the module vendor."],
+     ["As a next step, we'll…", "下一步我們會…", "As a next step, we'll rerun the test with the new firmware."]],
+    [["我們這週完成了漫遊測試的第一階段。", "wrap up / phase", "We wrapped up the first phase of the roaming test this week."],
+     ["我們按進度可以在十一月底交付。", "on track for", "We're on track for delivery at the end of November."],
+     ["目前主要卡住的是原廠的韌體修正。", "main blocker", "The main blocker is the firmware fix from the vendor."],
+     ["下一步我們會用新韌體重測。", "as a next step / rerun", "As a next step, we'll rerun the test with the new firmware."]],
+    "your director (Jason), who asks short follow-up questions",
+    "Morning. Let's start with the roaming project — where are we?",
+    ["report progress", "explain one problem", "propose next step"],
+    ["Okay. Is anything blocking you right now?", "How long do you think that will take to fix?", "Got it. What do you need from me?"]),
+
+  sc("wk-schedule-delay", "work", "Explaining a schedule delay", "說明時程延誤",
+    [["We've run into an issue with…", "我們在…遇到了問題", "We've run into an issue with the 6 GHz certification."],
+     ["push the date back by…", "把日期往後延…", "We need to push the date back by two weeks."],
+     ["make up for lost time", "把落後的進度追回來", "We're adding a second shift to make up for lost time."],
+     ["I'll keep you posted.", "我會隨時跟你更新", "I'll keep you posted as soon as we hear from the lab."]],
+    [["我們在 FCC 認證上遇到了問題。", "run into an issue", "We've run into an issue with the FCC certification."],
+     ["我們需要把出貨日往後延一週。", "push back", "We need to push the shipping date back by one week."],
+     ["我們多加了一個測試站來追進度。", "make up for lost time", "We added another test station to make up for lost time."],
+     ["實驗室一回覆，我就馬上通知你。", "keep you posted / as soon as", "I'll keep you posted as soon as the lab gets back to us."]],
+    "the project manager on the customer side (Linda), who is worried about the date",
+    "Hi, thanks for joining. I heard there might be a delay. What's going on?",
+    ["explain the cause", "give a new date", "show the recovery plan"],
+    ["How confident are you about the new date?", "Is there anything we can do on our side to help?", "Okay. Can you send me a written update by Friday?"]),
+
+  sc("wk-ask-vendor-spec", "work", "Asking a vendor for specs", "向原廠要規格",
+    [["Could you share the latest…?", "可以提供最新的…嗎？", "Could you share the latest datasheet for the WiFi 7 module?"],
+     ["We'd like to confirm whether…", "我們想確認是否…", "We'd like to confirm whether the module supports MLO."],
+     ["under NDA", "在保密協議下", "If the test report is under NDA, we're happy to sign one."],
+     ["by the end of next week", "下週結束前", "Is it possible to get the samples by the end of next week?"]],
+    [["可以提供最新版的 RF 測試報告嗎？", "Could you share", "Could you share the latest RF test report?"],
+     ["我們想確認這顆模組是否支援 320 MHz 頻寬。", "confirm whether / support", "We'd like to confirm whether this module supports 320 MHz bandwidth."],
+     ["如果這份文件需要保密協議，我們可以簽。", "under NDA", "If this document is under NDA, we're happy to sign one."],
+     ["下週結束前可以給我們樣品嗎？", "by the end of next week", "Could we get samples by the end of next week?"]],
+    "an FAE (Kevin) from a WiFi chipset vendor",
+    "Hi, this is Kevin from the FAE team. I understand you have some questions about our module?",
+    ["ask for a document", "confirm one feature", "agree on a deadline"],
+    ["Sure. Which firmware version are you using now?", "Some of that information is confidential. Do you have an NDA with us?", "I'll check with our HQ. When exactly do you need it?"]),
+
+  sc("wk-explain-results", "work", "Explaining test results to a customer", "跟客戶解釋測試結果",
+    [["As you can see from the chart,", "從圖表可以看到", "As you can see from the chart, throughput drops after 30 meters."],
+     ["within the spec", "在規格範圍內", "The EVM is still within the spec at the highest MCS."],
+     ["This is mainly due to…", "這主要是因為…", "This is mainly due to interference from the neighboring channel."],
+     ["To put it into context,", "換個角度來看", "To put it into context, our competitor drops 20 percent at the same distance."]],
+    [["從圖表可以看到，漫遊時間都在 50 毫秒以下。", "as you can see / under", "As you can see from the chart, the roaming time is under 50 milliseconds."],
+     ["所有頻道的發射功率都在規格範圍內。", "within the spec", "The transmit power is within the spec on all channels."],
+     ["這主要是因為天線擺放的位置。", "mainly due to", "This is mainly due to the antenna placement."],
+     ["換個角度看，這比上一代好了百分之十五。", "put it into context", "To put it into context, this is 15 percent better than the previous generation."]],
+    "a customer engineer (Mark), who questions the numbers",
+    "Thanks for sending the report. Honestly, the throughput numbers look lower than we expected.",
+    ["explain the data", "give the root cause", "reassure the customer"],
+    ["But why does it drop so much on 5 GHz?", "Is that a hardware problem or a software problem?", "What would you recommend we do in the field?"]),
+
+  sc("wk-presentation-open-close", "work", "Opening and closing a presentation", "簡報開場與結尾",
+    [["Today I'd like to cover three things.", "今天我想講三件事", "Today I'd like to cover three things: status, risks, and next steps."],
+     ["Let's start with…", "我們從…開始", "Let's start with a quick recap of last quarter."],
+     ["To sum up,", "總結來說", "To sum up, the platform is ready for the pilot."],
+     ["I'm happy to take any questions.", "歡迎大家提問", "That's all from me. I'm happy to take any questions."]],
+    [["今天我想講三件事：進度、風險和下一步。", "cover three things", "Today I'd like to cover three things: progress, risks, and next steps."],
+     ["我們先快速回顧一下上一季。", "start with / recap", "Let's start with a quick recap of last quarter."],
+     ["總結來說，我們已經準備好進入試產。", "to sum up / ready for", "To sum up, we're ready for the pilot run."],
+     ["我的部分就到這裡，歡迎提問。", "that's all from me", "That's all from me. I'm happy to take any questions."]],
+    "a senior manager in the audience (Ms. Chen), who asks one quick question",
+    "Okay everyone, we have fifteen minutes. Please go ahead.",
+    ["open with an agenda", "summarize the key message", "close and invite questions"],
+    ["Sorry to interrupt — can you say more about the risks?", "So what is the one thing you need from management?", "Thank you. Any final words?"]),
+
+  sc("wk-qa-handling", "work", "Handling Q&A", "Q&A 應答",
+    [["That's a good question.", "這是個好問題", "That's a good question. Let me explain how we measured it."],
+     ["If I understand you correctly,", "如果我沒理解錯的話", "If I understand you correctly, you're asking about the worst case."],
+     ["I don't have the exact number with me,", "我手邊沒有確切數字", "I don't have the exact number with me, but I'll send it after the meeting."],
+     ["Let me get back to you on that.", "這個我再回覆你", "Let me get back to you on that by tomorrow."]],
+    [["如果我沒理解錯，您是在問最差情況下的延遲。", "if I understand you correctly", "If I understand you correctly, you're asking about the latency in the worst case."],
+     ["我手邊沒有確切數字，會後寄給您。", "exact number / after the meeting", "I don't have the exact number with me, but I'll send it after the meeting."],
+     ["這個問題我明天再回覆您。", "get back to you", "Let me get back to you on that tomorrow."],
+     ["好問題，讓我說明我們是怎麼量的。", "good question / how we measured", "That's a good question. Let me explain how we measured it."]],
+    "a sharp customer (David) asking questions after your presentation",
+    "Thanks for the presentation. I have a question about the roaming latency you showed.",
+    ["clarify the question", "answer what you know", "promise a follow-up"],
+    ["Was that measured with real clients or with a test tool?", "What happens when there are more than fifty clients?", "Okay, when can I get the data?"]),
+
+  sc("wk-agree-disagree", "work", "Agreeing and disagreeing", "同意與反對",
+    [["I see your point, but…", "我懂你的意思，但…", "I see your point, but the cost is too high for this project."],
+     ["I couldn't agree more.", "我完全同意", "I couldn't agree more. We need more field data."],
+     ["I'm not sure that's the best approach.", "我不確定這是最好的做法", "I'm not sure that's the best approach for a small team."],
+     ["What if we…?", "如果我們…呢？", "What if we test with two vendors in parallel?"]],
+    [["我懂你的意思，但時程太緊了。", "I see your point", "I see your point, but the schedule is too tight."],
+     ["我完全同意，我們需要更多現場資料。", "couldn't agree more", "I couldn't agree more. We need more field data."],
+     ["我不確定只用一家供應商是最好的做法。", "not sure that's the best approach", "I'm not sure using only one vendor is the best approach."],
+     ["如果我們先做小規模試產呢？", "What if we", "What if we start with a small pilot run?"]],
+    "a product manager (Amy) who wants to skip some tests to save time",
+    "I think we can skip the full regression test this time. The changes are small.",
+    ["acknowledge her view", "disagree politely", "offer an alternative"],
+    ["But the customer is pushing hard on the date. Why not take the risk?", "How much time would your plan add?", "Fine. Can you write that down for the team?"]),
+
+  sc("wk-cross-team", "work", "Cross-team coordination", "跨部門協調",
+    [["Could you help us with…?", "能不能幫我們…？", "Could you help us with a few more test chambers next week?"],
+     ["on our end", "我們這邊", "On our end, the RF tuning is already done."],
+     ["align on the priorities", "對齊優先順序", "Let's align on the priorities before Friday."],
+     ["a win-win for both teams", "對兩個團隊都好", "Sharing the test setup is a win-win for both teams."]],
+    [["能不能幫我們安排下週的暗室時間？", "help us with / chamber", "Could you help us with some chamber time next week?"],
+     ["我們這邊的天線調校已經完成了。", "on our end", "On our end, the antenna tuning is already done."],
+     ["我們先在週五前對齊優先順序吧。", "align on", "Let's align on the priorities before Friday."],
+     ["共用這套測試設備對兩個團隊都好。", "win-win", "Sharing this test setup is a win-win for both teams."]],
+    "a manager from the software team (Eric), who is busy with his own release",
+    "Hey, I got your message. My team is pretty swamped this month. What do you need?",
+    ["make a clear request", "explain the benefit", "agree on who does what"],
+    ["Why can't your team do it yourselves?", "How many days of work are we talking about?", "Okay. Who should my engineer talk to?"]),
+
+  sc("wk-interview-intro", "work", "Self-introduction in an interview", "面試自我介紹",
+    [["I've been working in… for over ten years.", "我在…領域工作十多年了", "I've been working in wireless communication for over ten years."],
+     ["I'm responsible for…", "我負責…", "I'm responsible for RF design and certification."],
+     ["One project I'm proud of is…", "有一個我很自豪的專案是…", "One project I'm proud of is our multi-AP roaming test platform."],
+     ["What I bring to the team is…", "我能為團隊帶來的是…", "What I bring to the team is hands-on RF experience and a clear testing method."]],
+    [["我在無線通訊領域工作超過十年了。", "I've been working in", "I've been working in wireless communication for over ten years."],
+     ["我目前負責一個八人的 RF 團隊。", "responsible for / team of", "I'm currently responsible for an RF team of eight engineers."],
+     ["有一個我很自豪的專案是 WiFi 漫遊測試平台。", "proud of", "One project I'm proud of is our WiFi roaming test platform."],
+     ["我能帶給團隊的是實戰經驗。", "what I bring", "What I bring to the team is hands-on experience."]],
+    "an interviewer (Sarah) from a global networking company",
+    "Thanks for coming in today. Could you start by telling me a little about yourself?",
+    ["give a short background", "describe one achievement", "explain why you fit"],
+    ["Interesting. What was the hardest part of that project?", "How do you usually handle conflicts in your team?", "Why are you interested in this role?"]),
+
+  sc("wk-small-talk", "work", "Small talk with a foreign colleague", "跟外籍同事閒聊",
+    [["How was your weekend?", "週末過得怎麼樣？", "How was your weekend? Did you get out of the city?"],
+     ["I've been meaning to…", "我一直想要…", "I've been meaning to try that new ramen place."],
+     ["Speaking of…", "說到…", "Speaking of travel, have you been to Hualien?"],
+     ["That sounds like fun.", "聽起來很好玩", "A night market tour? That sounds like fun."]],
+    [["我一直想帶我女兒去動物園。", "I've been meaning to", "I've been meaning to take my daughter to the zoo."],
+     ["說到吃的，你吃過牛肉麵了嗎？", "speaking of", "Speaking of food, have you tried beef noodle soup?"],
+     ["週末過得怎麼樣？有出去走走嗎？", "how was / go anywhere", "How was your weekend? Did you go anywhere?"],
+     ["去爬山？聽起來很好玩。", "sounds like fun", "Hiking? That sounds like fun."]],
+    "a colleague from the German office (Tobias) visiting Taiwan",
+    "Morning! Wow, it's so humid today. How was your weekend?",
+    ["answer and ask back", "share something personal", "recommend something local"],
+    ["Nice! Do you have any plans for the holidays?", "I want to try some local food. Any recommendations?", "Is it easy to get there by MRT?"]),
+
+  sc("wk-video-call-open", "work", "Opening a video call", "視訊會議開場",
+    [["Can everyone hear me okay?", "大家都聽得到我嗎？", "Can everyone hear me okay? Let me know if the audio cuts out."],
+     ["Let me share my screen.", "我來分享畫面", "Let me share my screen. Can you see the slides?"],
+     ["You're on mute.", "你靜音了", "Sorry, Peter, I think you're on mute."],
+     ["Let's give it a couple of minutes.", "我們再等幾分鐘", "Let's give it a couple of minutes for others to join."]],
+    [["大家都聽得到我嗎？", "hear me okay", "Can everyone hear me okay?"],
+     ["我來分享畫面，看得到投影片嗎？", "share my screen", "Let me share my screen. Can you see the slides?"],
+     ["Peter，你好像靜音了。", "on mute", "Peter, I think you're on mute."],
+     ["我們再等兩分鐘讓其他人加入。", "give it a couple of minutes", "Let's give it a couple of minutes for the others to join."]],
+    "a vendor team lead (Rachel) joining a Teams call from the US",
+    "Hi, sorry I'm a bit late. Can you hear me? My connection is a little unstable.",
+    ["check audio and video", "start the meeting", "handle a technical problem"],
+    ["Your screen is frozen on my side. Could you share it again?", "Should we wait for Mike from the test team?", "Okay, how much time do we have today?"]),
+
+  sc("wk-email-confirm", "work", "Following up on an email", "Email 口頭確認",
+    [["Just to follow up on my email,", "跟進一下我寄的信", "Just to follow up on my email, did you get a chance to look at the report?"],
+     ["Did you get a chance to…?", "你有空…了嗎？", "Did you get a chance to review the test plan?"],
+     ["Just to make sure we're on the same page,", "確認一下我們理解一致", "Just to make sure we're on the same page, the deadline is the 15th, right?"],
+     ["a gentle reminder", "溫馨提醒", "This is a gentle reminder about the sample request."]],
+    [["跟進一下我昨天寄的信。", "follow up on", "Just to follow up on the email I sent yesterday."],
+     ["你有空看一下測試計畫了嗎？", "get a chance to", "Did you get a chance to look at the test plan?"],
+     ["確認一下我們理解一致：截止日是十五號，對嗎？", "on the same page", "Just to make sure we're on the same page, the deadline is the 15th, right?"],
+     ["溫馨提醒一下樣品的事。", "gentle reminder", "Just a gentle reminder about the samples."]],
+    "a contact at a partner company (Brian) who hasn't replied to your email",
+    "Hey, good to hear from you. What's up?",
+    ["mention the email", "confirm the key detail", "agree on a reply date"],
+    ["Oh, sorry, I've been traveling. Which email was it?", "I thought the deadline was the end of the month?", "Okay. I'll check with my team. Is Thursday okay?"]),
+
+  sc("wk-say-numbers", "work", "Saying numbers: dB, %, MHz", "數據怎麼唸（dB、%、MHz）",
+    [["drops to minus seventy dBm", "掉到負 70 dBm", "The RSSI drops to minus seventy dBm at the far end of the room."],
+     ["an increase of three dB", "增加了 3 dB", "We saw an increase of three dB after changing the antenna."],
+     ["on the two point four gigahertz band", "在 2.4 GHz 頻段上", "Interference is much worse on the two point four gigahertz band."],
+     ["by roughly fifteen percent", "大約百分之十五", "Power consumption went down by roughly fifteen percent."]],
+    [["RSSI 在走廊盡頭掉到負 75 dBm。", "drops to minus…", "The RSSI drops to minus seventy-five dBm at the end of the hallway."],
+     ["換了天線之後增益多了 3 dB。", "an increase of", "We saw an increase of three dB in gain after changing the antenna."],
+     ["5 GHz 頻段比 2.4 GHz 乾淨很多。", "five gigahertz band", "The five gigahertz band is much cleaner than two point four."],
+     ["吞吐量下降了大約百分之二十。", "by roughly … percent", "Throughput went down by roughly twenty percent."]],
+    "a customer (Jenny) on a phone call who cannot see your slides",
+    "I can't open the file right now. Could you just read me the key numbers?",
+    ["read three numbers clearly", "compare two results", "say what the numbers mean"],
+    ["Sorry, was that fifteen or fifty?", "And how does that compare with the last version?", "So is that good enough to pass?"]),
+
+  sc("wk-ask-resources", "work", "Asking for resources and budget", "要資源與預算",
+    [["We're stretched thin.", "我們人力很吃緊", "We're stretched thin with three projects running at once."],
+     ["make a case for…", "為…爭取／提出理由", "I'd like to make a case for a second test engineer."],
+     ["pay for itself", "本身就能回本", "The new analyzer will pay for itself within a year."],
+     ["If we don't…, we risk…", "如果我們不…，就可能…", "If we don't add capacity, we risk missing the Q2 launch."]],
+    [["我們同時跑三個專案，人力很吃緊。", "stretched thin", "We're stretched thin with three projects running at the same time."],
+     ["我想爭取再加一位測試工程師。", "make a case for", "I'd like to make a case for one more test engineer."],
+     ["這台新的分析儀一年內就能回本。", "pay for itself", "The new analyzer will pay for itself within a year."],
+     ["如果不增加人力，我們可能趕不上第二季上市。", "risk missing", "If we don't add people, we risk missing the Q2 launch."]],
+    "your division head (Mr. Lin), who cares about cost",
+    "I saw your budget request. It's quite a big number. Convince me.",
+    ["describe the current problem", "make the request", "show the return"],
+    ["Can't you just ask the team to work overtime?", "What if I only approve half?", "When would we see the results?"]),
+
+  sc("wk-run-meeting", "work", "Running a meeting", "主持會議",
+    [["Let's get started.", "我們開始吧", "Okay, it's two o'clock. Let's get started."],
+     ["Let's park that for now.", "這個先放一邊", "Good point, but let's park that for now and come back to it later."],
+     ["We're running out of time,", "時間快不夠了", "We're running out of time, so let's move on to the last item."],
+     ["Let's recap the action items.", "我們回顧一下待辦事項", "Before we go, let's recap the action items."]],
+    [["人都到了，我們開始吧。", "get started", "Everyone's here, so let's get started."],
+     ["好問題，不過這個先放一邊，最後再討論。", "park that", "Good question, but let's park that and discuss it at the end."],
+     ["時間快不夠了，我們進下一個議題。", "running out of time / move on", "We're running out of time, so let's move on to the next item."],
+     ["結束前我們回顧一下待辦事項。", "recap the action items", "Before we finish, let's recap the action items."]],
+    "a talkative team member (Steve) who keeps going off topic",
+    "Before we start, did anyone see the new phone launch yesterday? The camera is crazy.",
+    ["start the meeting", "bring it back on track", "close with action items"],
+    ["Oh, and about the lab move next month — can we talk about that too?", "I'm not sure who should own the firmware test.", "Wait, when is the deadline again?"]),
+
+  sc("wk-annual-goals", "work", "Presenting annual goals", "年度目標說明",
+    [["Our top priority this year is…", "我們今年的首要目標是…", "Our top priority this year is to finish the roaming test platform."],
+     ["We aim to…", "我們的目標是…", "We aim to cut test time by thirty percent."],
+     ["measured by…", "用…來衡量", "Success will be measured by the number of certified products."],
+     ["build on last year's…", "在去年…的基礎上", "We want to build on last year's work on WiFi 6E."]],
+    [["我們今年的首要目標是完成漫遊測試平台。", "top priority", "Our top priority this year is to complete the roaming test platform."],
+     ["我們的目標是把認證時間縮短三成。", "aim to / cut", "We aim to cut certification time by thirty percent."],
+     ["成效會用一次通過率來衡量。", "measured by", "Success will be measured by the first-pass rate."],
+     ["我們想在去年 WiFi 6E 的成果上繼續發展。", "build on", "We want to build on last year's WiFi 6E work."]],
+    "your new general manager (Grace), who wants clear, measurable goals",
+    "I'd like to hear your team's goals for next year. What are you focusing on?",
+    ["state the top goal", "give a measurable target", "link it to the business"],
+    ["How will you know if you've succeeded?", "What's the biggest risk to that plan?", "How does this help our sales team?"]),
+
+  // ---------------- 日常 8 ----------------
+  sc("dl-restaurant", "daily", "Ordering at a restaurant", "餐廳點餐",
+    [["Could we get a table for…?", "可以給我們…人的位子嗎？", "Could we get a table for three, please?"],
+     ["What would you recommend?", "你推薦什麼？", "It's our first time here. What would you recommend?"],
+     ["I'm allergic to…", "我對…過敏", "I'm allergic to peanuts. Does this dish have any?"],
+     ["Could we get the check, please?", "可以幫我們結帳嗎？", "Everything was great. Could we get the check, please?"]],
+    [["可以給我們兩大一小的位子嗎？", "a table for", "Could we get a table for two adults and one child?"],
+     ["我們第一次來，你推薦什麼？", "recommend", "It's our first time here. What would you recommend?"],
+     ["我女兒對蝦子過敏。", "allergic to", "My daughter is allergic to shrimp."],
+     ["可以幫我們結帳嗎？可以刷卡嗎？", "the check / by card", "Could we get the check, please? Can I pay by card?"]],
+    "a friendly waiter at a restaurant in Sydney",
+    "Hi there, welcome! How many in your group?",
+    ["get a table", "order with a question", "ask for the bill"],
+    ["Are you ready to order, or do you need a few more minutes?", "Any allergies I should know about?", "How was everything tonight?"]),
+
+  sc("dl-airport-hotel", "daily", "Airport and hotel", "機場與飯店",
+    [["I'd like to check in.", "我要辦入住", "Hi, I'd like to check in. The reservation is under Hsu."],
+     ["Is breakfast included?", "有含早餐嗎？", "Is breakfast included, and what time does it start?"],
+     ["my flight was delayed", "我的班機延誤了", "My flight was delayed, so I'll arrive after midnight."],
+     ["Could I get a late checkout?", "可以晚一點退房嗎？", "Could I get a late checkout? My flight is at six."]],
+    [["我要辦入住，訂房名字是許。", "check in / under", "I'd like to check in. The reservation is under Hsu."],
+     ["房價有含早餐嗎？", "included", "Is breakfast included in the rate?"],
+     ["我的班機延誤了，會晚兩個小時到。", "delayed", "My flight was delayed, so I'll be two hours late."],
+     ["我可以延到下午兩點退房嗎？", "late checkout", "Could I get a late checkout at 2 p.m.?"]],
+    "a hotel front desk clerk in San Diego",
+    "Good evening! Are you checking in?",
+    ["check in", "ask about the room", "make a special request"],
+    ["I'm sorry, we don't have a king room left. Is a twin room okay?", "Will you need a parking pass?", "Is there anything else I can help you with?"]),
+
+  sc("dl-doctor", "daily", "Seeing a doctor", "看醫生",
+    [["I've had… for…", "我已經…好幾天了", "I've had a sore throat for three days."],
+     ["It hurts when I…", "我…的時候會痛", "It hurts when I swallow."],
+     ["Is it serious?", "嚴重嗎？", "Is it serious, or will it go away by itself?"],
+     ["How often should I take it?", "這個要多久吃一次？", "How often should I take it, before or after meals?"]],
+    [["我已經咳嗽一個禮拜了。", "I've had", "I've had a cough for a week."],
+     ["我深呼吸的時候會痛。", "hurts when", "It hurts when I take a deep breath."],
+     ["嚴重嗎？需要照 X 光嗎？", "serious / X-ray", "Is it serious? Do I need an X-ray?"],
+     ["這個藥一天要吃幾次？", "how often", "How often should I take this medicine?"]],
+    "a doctor (Dr. Patel) at a clinic during your business trip",
+    "Hello, I'm Dr. Patel. What brings you in today?",
+    ["describe the symptoms", "answer follow-up questions", "ask about treatment"],
+    ["When did it start? Do you have a fever?", "Are you taking any other medication?", "I'll give you something for it. Any questions?"]),
+
+  sc("dl-park-parents", "daily", "Chatting with parents at the park", "帶小孩去公園聊天",
+    [["How old is your little one?", "你家小朋友幾歲？", "She's so cute! How old is your little one?"],
+     ["They grow up so fast.", "小孩長得好快", "She was a baby last year. They grow up so fast."],
+     ["take turns", "輪流", "Let's take turns on the slide, okay?"],
+     ["Do you come here often?", "你們常來這裡嗎？", "Do you come here often? It's our first time."]],
+    [["你家小朋友幾歲了？我女兒四歲。", "little one", "How old is your little one? My daughter is four."],
+     ["小孩長得好快，一下子就上幼兒園了。", "grow up so fast / kindergarten", "They grow up so fast. She's already in kindergarten."],
+     ["你們要輪流玩鞦韆喔。", "take turns", "You need to take turns on the swing, okay?"],
+     ["你們常來這個公園嗎？", "come here often", "Do you come to this park often?"]],
+    "another parent (Megan) at a playground",
+    "Hi! Our kids seem to be getting along well. Is that your daughter in the red jacket?",
+    ["introduce your child", "ask about theirs", "suggest meeting again"],
+    ["Oh, she's four? Does she go to a kindergarten nearby?", "Mine is so picky with food. Is yours the same?", "We come here most Saturdays. Maybe we'll see you again?"]),
+
+  sc("dl-supermarket-return", "daily", "Shopping and returns", "超市與退貨",
+    [["Where can I find…?", "請問…在哪裡？", "Excuse me, where can I find the baby wipes?"],
+     ["I'd like to return this.", "我想退這個", "I'd like to return this. It doesn't work."],
+     ["I have the receipt.", "我有收據", "I have the receipt right here."],
+     ["Can I get a refund or an exchange?", "可以退款或換貨嗎？", "Can I get a refund, or can I only exchange it?"]],
+    [["不好意思，請問牛奶在哪裡？", "where can I find", "Excuse me, where can I find the milk?"],
+     ["我想退這台吹風機，它不會熱。", "return / doesn't heat up", "I'd like to return this hair dryer. It doesn't heat up."],
+     ["我有收據，是上週六買的。", "receipt / bought", "I have the receipt. I bought it last Saturday."],
+     ["可以退錢，還是只能換貨？", "refund / exchange", "Can I get a refund, or can I only exchange it?"]],
+    "a customer service clerk at a supermarket",
+    "Hi, how can I help you?",
+    ["explain the problem", "show proof of purchase", "ask for a refund"],
+    ["What seems to be the problem with it?", "Do you have the receipt with you?", "We can only give you store credit. Is that okay?"]),
+
+  sc("dl-directions", "daily", "Asking for directions", "問路",
+    [["Could you tell me how to get to…?", "可以告訴我怎麼去…嗎？", "Could you tell me how to get to the train station?"],
+     ["Is it within walking distance?", "走路到得了嗎？", "Is it within walking distance, or should I take a taxi?"],
+     ["go straight and turn left at…", "直走，在…左轉", "Go straight and turn left at the second light."],
+     ["I think I'm lost.", "我好像迷路了", "Sorry, I think I'm lost. Is this Main Street?"]],
+    [["可以告訴我怎麼去博物館嗎？", "how to get to", "Could you tell me how to get to the museum?"],
+     ["走路到得了嗎？還是要搭公車？", "within walking distance", "Is it within walking distance, or should I take a bus?"],
+     ["直走，在第二個紅綠燈右轉。", "go straight / turn right", "Go straight and turn right at the second traffic light."],
+     ["不好意思，我好像迷路了。", "I'm lost", "Excuse me, I think I'm lost."]],
+    "a local person on the street in London",
+    "You look a bit lost. Can I help you?",
+    ["ask for directions", "check the distance", "confirm the route"],
+    ["Where are you trying to go?", "It's about twenty minutes on foot. Do you want to walk?", "Got it? Left at the bank, then straight on."]),
+
+  sc("dl-neighbor", "daily", "Chatting with a neighbor", "跟鄰居寒暄",
+    [["Nice to finally meet you.", "終於見到你了", "We just moved in. Nice to finally meet you."],
+     ["How long have you lived here?", "你住這裡多久了？", "How long have you lived here? The area seems really nice."],
+     ["Let me know if you need anything.", "有需要就跟我說", "We're in 5B. Let me know if you need anything."],
+     ["keep it down", "小聲一點", "Sorry about the noise. We'll try to keep it down."]],
+    [["我們上個月剛搬來，終於見到你了。", "just moved in / finally meet", "We just moved in last month. Nice to finally meet you."],
+     ["你住在這裡多久了？", "how long have you", "How long have you lived here?"],
+     ["我們住七樓，有需要就跟我說。", "let me know", "We're on the seventh floor. Let me know if you need anything."],
+     ["抱歉吵到你，我們會小聲一點。", "keep it down", "Sorry about the noise. We'll try to keep it down."]],
+    "an expat neighbor (Daniel) in your building",
+    "Hi, I think we're neighbors. I'm Daniel, from the eighth floor.",
+    ["introduce yourself", "make small talk", "offer help"],
+    ["How long have you been in this building?", "Do you know where I should put the recycling?", "By the way, is your daughter the one who plays the piano?"]),
+
+  sc("dl-trip-plan", "daily", "Planning a family trip", "旅遊規劃",
+    [["We're thinking of going to…", "我們在考慮去…", "We're thinking of going to Australia in February."],
+     ["on a budget", "預算有限", "We're traveling on a budget this time."],
+     ["kid-friendly", "適合小孩的", "Are there any kid-friendly activities nearby?"],
+     ["It's worth it.", "很值得", "It's a long drive, but it's worth it."]],
+    [["我們在考慮明年春天去紐西蘭。", "thinking of going", "We're thinking of going to New Zealand next spring."],
+     ["這次我們預算有限。", "on a budget", "We're on a budget this time."],
+     ["那邊有適合小孩的景點嗎？", "kid-friendly", "Are there any kid-friendly places there?"],
+     ["雖然要開三個小時，但很值得。", "worth it", "It's a three-hour drive, but it's worth it."]],
+    "a travel agent (Olivia) helping you plan a family trip",
+    "So, where are you thinking of going this time?",
+    ["say where and when", "explain your needs", "ask for a suggestion"],
+    ["How many people, and how old are the kids?", "What's your budget per person?", "Would you prefer a hotel or an apartment?"])
+  ];
+})();
+if (typeof window !== 'undefined') window.DEC_LIB = DEC_LIB;
+</script>
+
+<!-- ============================================================
+     dec-app：畫面與互動（依賴 DOM）。
+     ============================================================ -->
+<script id="dec-app">
+(function () {
+  'use strict';
+  var DEC = window.DEC, LIB = window.DEC_LIB;
+
+  // ---------- 本機儲存（key 前綴 dec_v1_，發布後不可改） ----------
+  var KEY = { profile: 'dec_v1_profile', days: 'dec_v1_days', chunks: 'dec_v1_chunks' };
+  var CFG_KEY = 'dec_v1_cfg'; // 這台裝置的連線設定（key 只存在這裡，不進 Gist）
+  var mem = {};
+  function sget(k, d) {
+    try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }
+    catch (e) { return (k in mem) ? mem[k] : d; }
+  }
+  function sset(k, v) {
+    try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { mem[k] = v; }
+  }
+
+  // ---------- 狀態 ----------
+  var S = {
+    profile: DEC.normalizeProfile(sget(KEY.profile, null)),
+    days: {}, chunks: sget(KEY.chunks, {}) || {},
+    tab: 'today', view: 'home',
+    aiState: 'off', aiOffMsg: '',
+    sync: 'local', syncMsg: '',
+    cfg: DEC.normalizeCfg(sget(CFG_KEY, null)),
+    cfgDraft: { geminiKey: '', githubToken: '' },
+    // 連線狀態燈：none 未設定／set 已設定未測試／testing 測試中／ok 可用／err 錯誤（msg 是原因）
+    conn: { gemini: { state: 'none', msg: '' }, github: { state: 'none', msg: '' } },
+    heard: '', micMsg: '',
+    lesson: null, lastDone: null,
+    calOffset: 0, calSel: null,
+    showCustom: false, customText: '', customJob: { busy: false, err: null },
+    talk: { msgs: [], turns: [], input: '', busy: false, err: null },
+    rev: { mode: 'list', match: null, make: null },
+    listening: null, micBlocked: false, shadow: {}, confirmReset: false
+  };
+  (function loadDays() {
+    var raw = sget(KEY.days, {}) || {};
+    Object.keys(raw).forEach(function (k) { if (DEC.isDateStr(k)) S.days[k] = DEC.normalizeDay(raw[k]); });
+  })();
+
+  function today() { return DEC.localDateStr(new Date()); }
+  function h(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function $(id) { return document.getElementById(id); }
+
+  // ---------- 圖示（內嵌 SVG） ----------
+  function ic(path, size) { return '<svg viewBox="0 0 24 24" width="' + (size || 20) + '" height="' + (size || 20) + '" aria-hidden="true">' + path + '</svg>'; }
+  var I = {
+    play: ic('<path d="M8 5v14l11-7z" fill="currentColor"/>'),
+    mic: ic('<rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>'),
+    stop: ic('<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>'),
+    star: ic('<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>'),
+    starOn: ic('<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" fill="currentColor"/>'),
+    check: ic('<path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'),
+    x: ic('<path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>'),
+    flame: ic('<path d="M12 2c1 4 5 5.5 5 11a5 5 0 0 1-10 0c0-3 1.5-4.5 2.5-6 .3 2 1.2 3 2.2 3.3C11 8 11 5 12 2z" fill="currentColor"/>', 22),
+    snow: ic('<path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>', 18),
+    today: ic('<rect x="3" y="5" width="18" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>', 24),
+    review: ic('<rect x="4" y="6" width="14" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 3h11a2 2 0 0 1 2 2v11" fill="none" stroke="currentColor" stroke-width="2"/>', 24),
+    talk: ic('<path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>', 24),
+    me: ic('<circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 21c1-4.5 4.5-6 8-6s7 1.5 8 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>', 24),
+    back: ic('<path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>')
+  };
+
+  // ---------- 吉祥物：訊號小鳥（10 級，同一隻鳥換配色與配件） ----------
+  var LEVEL_NAMES = ['訊號蛋', '小訊號', '天線上線', '開始發射', '耳機會議', '正式簡報', '數據分析', '閃亮主持', '進修畢業', '跨國英雄', '訊號之王'];
+  var PAL = [null,
+    ['#F5C842', '#FCE7A0'], ['#F5C842', '#FCE7A0'], ['#F3B33D', '#FBE0A2'], ['#F09A3E', '#FAD9B0'],
+    ['#3DB4A8', '#C3EAE3'], ['#3DB4A8', '#C3EAE3'], ['#4A86D8', '#D2E2F8'], ['#4A86D8', '#D2E2F8'],
+    ['#8A6AD3', '#E2D7F7'], ['#E2B13C', '#FFF1C4']];
+  function birdSVG(L) {
+    var o = '<svg viewBox="0 0 200 200" role="img" aria-label="訊號小鳥 Lv' + L + ' ' + LEVEL_NAMES[L] + '">';
+    if (L <= 0) {
+      o += '<ellipse cx="100" cy="182" rx="46" ry="8" fill="#000" opacity=".08"/>' +
+        '<ellipse cx="100" cy="116" rx="50" ry="64" fill="#F7ECD2" stroke="#C9B48A" stroke-width="3"/>' +
+        '<path d="M58 112l14-10 12 12 14-12 14 12 14-12 14 10" fill="none" stroke="#C9B48A" stroke-width="3" stroke-linejoin="round"/>' +
+        '<circle cx="78" cy="82" r="7" fill="#F5C842"/><circle cx="118" cy="140" r="9" fill="#F5C842" opacity=".7"/>' +
+        '<line x1="100" y1="52" x2="100" y2="30" stroke="#5B6478" stroke-width="4" stroke-linecap="round"/><circle cx="100" cy="26" r="6" fill="#E5484D"/>';
+      return o + '</svg>';
+    }
+    var body = PAL[L][0], belly = PAL[L][1];
+    o += '<ellipse cx="100" cy="188" rx="50" ry="7" fill="#000" opacity=".08"/>';
+    if (L >= 9) o += '<path d="M56 112 Q100 76 144 112 L156 178 Q100 192 44 178 Z" fill="#C8463D"/>';
+    o += '<line x1="86" y1="172" x2="84" y2="186" stroke="#E8762B" stroke-width="5" stroke-linecap="round"/><line x1="114" y1="172" x2="116" y2="186" stroke="#E8762B" stroke-width="5" stroke-linecap="round"/>';
+    o += '<ellipse cx="100" cy="122" rx="56" ry="54" fill="' + body + '"/>';
+    o += '<ellipse cx="100" cy="140" rx="36" ry="33" fill="' + belly + '"/>';
+    o += '<ellipse cx="48" cy="130" rx="12" ry="22" fill="' + body + '" stroke="#000" stroke-opacity=".12" stroke-width="2" transform="rotate(14 48 130)"/>';
+    o += '<ellipse cx="152" cy="130" rx="12" ry="22" fill="' + body + '" stroke="#000" stroke-opacity=".12" stroke-width="2" transform="rotate(-14 152 130)"/>';
+    o += '<circle cx="72" cy="124" r="7" fill="#F28C8C" opacity=".55"/><circle cx="128" cy="124" r="7" fill="#F28C8C" opacity=".55"/>';
+    o += '<circle cx="82" cy="108" r="7" fill="#1D2233"/><circle cx="118" cy="108" r="7" fill="#1D2233"/><circle cx="84" cy="105" r="2.2" fill="#fff"/><circle cx="120" cy="105" r="2.2" fill="#fff"/>';
+    o += '<path d="M91 118 L109 118 L100 131 Z" fill="#E8762B"/>';
+    if (L >= 5) o += '<path d="M100 141 L93 149 L100 174 L107 149 Z" fill="#C8463D"/><rect x="95" y="137" width="10" height="7" rx="2" fill="#A3332C"/>';
+    if (L >= 6) o += '<circle cx="82" cy="108" r="13" fill="#fff" fill-opacity=".18" stroke="#1D2233" stroke-width="3"/><circle cx="118" cy="108" r="13" fill="#fff" fill-opacity=".18" stroke="#1D2233" stroke-width="3"/><line x1="95" y1="108" x2="105" y2="108" stroke="#1D2233" stroke-width="3"/>';
+    if (L >= 4) o += '<path d="M50 116 Q50 60 100 60 Q150 60 150 116" fill="none" stroke="#2F3646" stroke-width="6" stroke-linecap="round"/><rect x="40" y="104" width="15" height="26" rx="6" fill="#2F3646"/><rect x="145" y="104" width="15" height="26" rx="6" fill="#2F3646"/><path d="M48 128 Q56 152 80 150" fill="none" stroke="#2F3646" stroke-width="3"/><circle cx="82" cy="150" r="4" fill="#2F3646"/>';
+    if (L >= 8 && L < 10) o += '<path d="M62 68 L100 52 L138 68 L100 84 Z" fill="#1D2233"/><rect x="84" y="70" width="32" height="10" fill="#1D2233"/><path d="M134 70 L136 92" stroke="#F2C230" stroke-width="3"/><circle cx="136" cy="94" r="4" fill="#F2C230"/>';
+    if (L >= 10) o += '<path d="M72 72 L72 46 L86 58 L100 38 L114 58 L128 46 L128 72 Z" fill="#F2C230" stroke="#B8860B" stroke-width="3" stroke-linejoin="round"/><circle cx="100" cy="62" r="5" fill="#E5484D"/>';
+    if (L >= 2 && L < 10) o += '<line x1="100" y1="68" x2="100" y2="38" stroke="#5B6478" stroke-width="4" stroke-linecap="round"/><circle cx="100" cy="34" r="6" fill="#E5484D"/>';
+    if (L >= 3 && L < 10) o += '<path d="M88 24 Q82 34 88 44 M112 24 Q118 34 112 44 M80 18 Q70 34 80 50 M120 18 Q130 34 120 50" fill="none" stroke="#E5484D" stroke-width="3" stroke-linecap="round"/>';
+    if (L >= 7) o += '<path d="M30 60 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z M168 52 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z M164 150 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z" fill="#F2C230"/>';
+    return o + '</svg>';
+  }
+
+  // ---------- 情境 ----------
+  function scnById(id) { for (var i = 0; i < LIB.length; i++) if (LIB[i].id === id) return LIB[i]; return null; }
+  function scenarioFor(date) {
+    var d = S.days[date];
+    if (d && d.custom) return d.custom;
+    if (d && d.scenarioId) { var s = scnById(d.scenarioId); if (s) return s; }
+    return DEC.pickScenario(LIB, date, 0);
+  }
+  function ensureDay(date) {
+    if (!S.days[date]) S.days[date] = DEC.newDay(scenarioFor(date).id);
+    return S.days[date];
+  }
+  function chunkId(scn, i) { return scn.id + '-' + i; }
+
+  // ---------- 設定 ----------
+  function saveCfg() { sset(CFG_KEY, S.cfg); }
+  function refreshAiState() {
+    S.aiState = S.cfg.geminiKey ? 'on' : 'off';
+    S.aiOffMsg = S.cfg.geminiKey ? '' : '還沒設定 Gemini key：①② 照常；③④ 用自評模式，一樣可以打卡。到「我」→〈連線設定〉貼上 key 就有 AI 家教。';
+    if (!S.cfg.geminiKey) S.conn.gemini = { state: 'none', msg: '' };
+    else if (S.conn.gemini.state === 'none') S.conn.gemini = { state: 'set', msg: '' };
+    if (!S.cfg.githubToken) S.conn.github = { state: 'none', msg: '' };
+    else if (S.conn.github.state === 'none') S.conn.github = { state: 'set', msg: '' };
+  }
+
+  // ---------- 儲存：本機鏡像＋私人 Gist（有 GitHub token 時） ----------
+  // 寫入一律先寫本機，再標記 dirty；2 秒內沒有新的寫入就做一次「GET → 合併 → PATCH」
+  function saveProfile() {
+    S.profile.updatedAt = new Date().toISOString();
+    sset(KEY.profile, S.profile);
+    markDirty();
+  }
+  function saveDay(date) { sset(KEY.days, S.days); markDirty(); }
+  function saveChunk(id) { sset(KEY.chunks, S.chunks); markDirty(); }
+  function setSync(s, msg) { S.sync = s; S.syncMsg = msg || ''; paintPills(); }
+
+  var GH = 'https://api.github.com';
+  var SY = { dirty: false, timer: null, running: false, again: false, lastSync: 0, pausedUntil: 0 };
+  function markDirty() {
+    if (!S.cfg.githubToken) return;
+    SY.dirty = true;
+    clearTimeout(SY.timer);
+    SY.timer = setTimeout(function () { syncNow(); }, 2000);
+  }
+  function ghErr(code, msg) { var e = new Error(code); e.code = code; e.msg = msg || ''; return e; }
+  // GitHub API 呼叫：token 只放在 header，不進網址、不寫 console
+  async function ghFetch(path, method, body) {
+    var res;
+    try {
+      res = await fetch(GH + path, {
+        method: method || 'GET', cache: 'no-store',
+        headers: { 'Authorization': 'Bearer ' + S.cfg.githubToken, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28',
+          'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined
+      });
+    } catch (e) { throw ghErr('network', '連不上 GitHub，下次再試。'); }
+    if (res.status === 401) throw ghErr('bad_token', 'GitHub token 無效或過期，請到「我」重新設定。');
+    if (res.status === 403 && res.headers.get('x-ratelimit-remaining') === '0') throw ghErr('gh_rate', 'GitHub 呼叫次數用完了，10 分鐘後再同步。');
+    if (res.status === 403) throw ghErr('bad_token', 'GitHub token 沒有 gist 權限，請重新產生並勾選 gist。');
+    if (res.status === 404) throw ghErr('not_found', '');
+    if (!res.ok) throw ghErr('http', 'GitHub 回應錯誤（' + res.status + '），下次再試。');
+    try { return await res.json(); } catch (e) { throw ghErr('http', 'GitHub 回應看不懂，下次再試。'); }
+  }
+  // 找 Gist：gistId → 列表找檔名 → 建私人 gist。回傳 {gist} 或 {created:true}
+  async function findGist(local) {
+    if (S.cfg.gistId) {
+      try { return { gist: await ghFetch('/gists/' + S.cfg.gistId) }; }
+      catch (e) { if (e.code !== 'not_found') throw e; S.cfg.gistId = ''; saveCfg(); }
+    }
+    var list = await ghFetch('/gists?per_page=100');
+    var id = DEC.findGistId(list, DEC.GIST_FILE);
+    if (id) { S.cfg.gistId = id; saveCfg(); return { gist: await ghFetch('/gists/' + id) }; }
+    var files = {}; files[DEC.GIST_FILE] = { content: JSON.stringify(DEC.makeGistFile(local, new Date().toISOString())) };
+    var g = await ghFetch('/gists', 'POST', { description: 'Daily English Coach progress (private)', public: false, files: files });
+    if (!g || typeof g.id !== 'string') throw ghErr('http', '建立 Gist 失敗，下次再試。');
+    S.cfg.gistId = g.id; saveCfg();
+    return { created: true };
+  }
+  // 讀 Gist 裡的檔：沒有這個檔回 null；被截斷就改抓 raw_url；內容壞掉丟錯誤（不覆蓋，以免蓋掉雲端資料）
+  async function readRemote(gist) {
+    var info = DEC.gistFileInfo(gist, DEC.GIST_FILE);
+    if (!info) return null;
+    var text = info.content;
+    if (info.truncated && info.rawUrl) {
+      try {
+        var r = await fetch(info.rawUrl, { cache: 'no-store' });
+        if (!r.ok) throw new Error('raw');
+        text = await r.text();
+      } catch (e) { throw ghErr('network', '讀不到雲端進度檔，下次再試。'); }
+    }
+    if (!text.trim()) return null;
+    try { return JSON.parse(text); } catch (e) { throw ghErr('bad_remote', '雲端進度檔格式壞了，這次不同步（本機資料保留）。'); }
+  }
+  // 同步一次：GET → DEC.mergeProfiles → 寫本機 → 有差才 PATCH。同時間只跑一個，跑完又 dirty 就再跑。
+  async function syncNow() {
+    if (!S.cfg.githubToken) { setSync('local'); return false; }
+    if (Date.now() < SY.pausedUntil) return false;
+    if (SY.running) { SY.again = true; return false; }
+    SY.running = true; SY.dirty = false; clearTimeout(SY.timer);
+    setSync('syncing');
+    var ok = false;
+    try {
+      var found = await findGist({ profile: S.profile, days: S.days, chunks: S.chunks });
+      if (!found.created) {
+        var raw = await readRemote(found.gist);
+        var remote = DEC.normalizeBundle(raw);
+        // 合併用「現在」的本機資料（GET 期間的修改也算進來）
+        var m = DEC.normalizeBundle(DEC.mergeProfiles({ profile: S.profile, days: S.days, chunks: S.chunks }, remote));
+        S.profile = m.profile; S.days = m.days; S.chunks = m.chunks;
+        sset(KEY.profile, S.profile); sset(KEY.days, S.days); sset(KEY.chunks, S.chunks);
+        if (!raw || !DEC.sameBundle(m, remote)) {
+          var files = {}; files[DEC.GIST_FILE] = { content: JSON.stringify(DEC.makeGistFile(m, new Date().toISOString())) };
+          await ghFetch('/gists/' + S.cfg.gistId, 'PATCH', { files: files });
+        }
+      }
+      SY.lastSync = Date.now();
+      S.conn.github = { state: 'ok', msg: '' };
+      setSync('ok');
+      ok = true;
+    } catch (e) {
+      var code = e && e.code, msg = (e && e.msg) || '同步失敗，下次再試。';
+      if (code === 'gh_rate') SY.pausedUntil = Date.now() + 10 * 60 * 1000;
+      if (code === 'bad_token' || code === 'bad_remote') S.conn.github = { state: 'err', msg: msg };
+      setSync('err', msg);
+    } finally {
+      SY.running = false;
+      if (SY.again || SY.dirty) { SY.again = false; markDirty(); }
+    }
+    if (!S.lesson && !isTyping()) render(); else paintPills();
+    return ok;
+  }
+  // 正在輸入 key 的時候不要重畫（避免游標跳掉）
+  function isTyping() { var a = document.activeElement; return !!(a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA') && a.value); }
+
+  // ---------- AI 家教：Gemini generateContent ----------
+  var activeCtl = null;
+  function aiErrMsg(code) {
+    switch (code) {
+      case 'cancelled': return '';
+      case 'rate_limited': return '使用次數太多了（Gemini 免費額度），請稍後再試。';
+      case 'bad_key': return 'Gemini key 無效，請到「我」重新設定。';
+      case 'invalid_json': return 'AI 回覆的格式不對，請按「再試一次」。';
+      case 'refused': return 'AI 不回覆這段內容，請換個說法。';
+      case 'empty_completion': return 'AI 沒有回覆，請把句子改短一點再送。';
+      case 'not_granted': return '還沒設定 Gemini key，請到「我」→〈連線設定〉。';
+      default: return '連線不穩，請按「再試一次」。';
+    }
+  }
+  // 底層呼叫：key 只放在 x-goog-api-key header；失敗丟 {code}；絕不自動重試、不做 cache
+  async function geminiCall(input, tier, signal) {
+    var res;
+    try {
+      res = await fetch(DEC.geminiUrl(tier, S.cfg.model), {
+        method: 'POST', cache: 'no-store', signal: signal,
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': S.cfg.geminiKey },
+        body: JSON.stringify(DEC.geminiRequestBody(input))
+      });
+    } catch (e) { throw { code: e && e.name === 'AbortError' ? 'cancelled' : 'upstream_error' }; }
+    if (!res.ok) {
+      var t = ''; try { t = await res.text(); } catch (e) {}
+      throw { code: DEC.geminiErrorCode(res.status, t) };
+    }
+    var j;
+    try { j = await res.json(); } catch (e) { throw { code: e && e.name === 'AbortError' ? 'cancelled' : 'invalid_json' }; }
+    var p = DEC.parseGeminiResponse(j);
+    if (!p.ok) throw { code: p.code };
+    return p.value;
+  }
+  // 呼叫方式與 v1 相同：askJSON(input, {modelTier}, job)；錯誤放 job.err = {code, msg}
+  async function askJSON(input, opts, job) {
+    if (!S.cfg.geminiKey) { job.err = { code: 'not_granted', msg: aiErrMsg('not_granted') }; return null; }
+    var ctl = new AbortController();  // 每次呼叫一個新的
+    activeCtl = ctl; job.busy = true; job.err = null; render();
+    try {
+      var v = await geminiCall(input, (opts && opts.modelTier) || 'default', ctl.signal);
+      if (S.conn.gemini.state !== 'ok') { S.conn.gemini = { state: 'ok', msg: '' }; paintPills(); }
+      return v;
+    } catch (e) {
+      var code = (e && typeof e.code === 'string') ? e.code : 'upstream_error';
+      if (code === 'bad_key') { S.conn.gemini = { state: 'err', msg: aiErrMsg('bad_key') }; paintPills(); } // 不清 key，只亮紅燈
+      if (code !== 'cancelled') job.err = { code: code, msg: aiErrMsg(code) };
+      return null;
+    } finally {
+      if (activeCtl === ctl) activeCtl = null;
+      job.busy = false;
+    }
+  }
+  // 「我」的測試按鈕
+  async function testGemini() {
+    if (!S.cfg.geminiKey) { S.conn.gemini = { state: 'none', msg: '' }; render(); return; }
+    S.conn.gemini = { state: 'testing', msg: '' }; render();
+    try {
+      var v = await geminiCall('Reply with only JSON, no other text: {"ok":true}', 'quick', new AbortController().signal);
+      S.conn.gemini = v && typeof v === 'object' ? { state: 'ok', msg: '' } : { state: 'err', msg: 'AI 回覆格式不對。' };
+    } catch (e) {
+      var code = e && e.code;
+      S.conn.gemini = { state: 'err', msg: aiErrMsg(code === 'cancelled' ? 'upstream_error' : code) };
+    }
+    render();
+  }
+  async function testGithub() {
+    if (!S.cfg.githubToken) { S.conn.github = { state: 'none', msg: '' }; setSync('local'); render(); return; }
+    S.conn.github = { state: 'testing', msg: '' }; render();
+    SY.pausedUntil = 0;
+    while (SY.running) await new Promise(function (r) { setTimeout(r, 200); });
+    var ok = await syncNow();
+    if (!ok && S.conn.github.state === 'testing') S.conn.github = { state: 'err', msg: S.syncMsg || '同步失敗。' };
+    render();
+  }
+
+  // ---------- 提示詞（輸出一律 JSON，形狀寫死並附一行範例） ----------
+  var LEARNER = 'The learner is a Taiwanese RF engineering manager (WiFi, 5G, testing, meetings with vendors and customers), English level CEFR B1-B2, TOEIC 740.';
+  var NO_JA = 'Any Chinese you write must be Traditional Chinese as used in Taiwan. Never write Japanese.';
+  var PROMPTS = {
+    judge: function (d, ans) {
+      return [
+        'You are a friendly English speaking coach. ' + LEARNER,
+        'The learner saw a Chinese prompt and tried to say it in English.',
+        'Chinese prompt: ' + d.zh,
+        'Target chunk/hint: ' + (d.hint || ''),
+        'Reference answer: ' + d.en,
+        'Learner said: ' + ans,
+        'Decide "ok": true if the meaning matches and the sentence is understandable in a real meeting (small slips are fine), false otherwise.',
+        '"better": one natural spoken version that keeps the learner\'s idea and uses the target chunk. "note_zh": ONE short reason in Chinese (max 40 characters) explaining WHY it is better (grammar point, word choice, or tone).',
+        NO_JA,
+        'Reply with only JSON, no other text: {"ok":boolean,"better":string,"note_zh":string}',
+        'Example: {"ok":true,"better":"We wrapped up the first phase this week.","note_zh":"wrap up 比 finish 更口語，適合週會"}'
+      ].join('\n');
+    },
+    roleplay: function (scn) {
+      var rp = scn.roleplay;
+      return [
+        'You are role-playing to help a learner practice spoken English. ' + LEARNER,
+        'Scenario: ' + scn.title + '. You are ' + rp.partner + '.',
+        'You already opened with: "' + rp.opening + '"',
+        'The learner\'s goals: ' + rp.goals.join('; ') + '.',
+        'Target chunks the learner is practicing: ' + scn.chunks.map(function (c) { return c.en; }).join(' | '),
+        'Each learner message starts with a tag like [Learner message 2/6]; the tag is not part of what they said.',
+        'Rules:',
+        '- Stay in character. "reply": 1-2 short sentences, B1-B2 words, natural spoken English, usually ending with a question that moves toward the goals.',
+        '- Check ONLY the learner\'s latest message. If it has a real grammar mistake or clearly unnatural wording, set "correction" to {"has":true,"original":<the wrong part, quoted exactly>,"fixed":<a natural version of the whole sentence>,"why_zh":<one short reason in Chinese, max 40 characters>}. If the sentence is natural B1-B2 English, "correction" MUST be null, even if another phrasing is also possible. Never output a correction whose "fixed" text is the same as what the learner wrote.',
+        '- "suggestions": exactly 2 short replies the learner could say next (B1-B2), using a target chunk when it fits.',
+        '- When the learner\'s message is 6/6, close the conversation politely in "reply" and set "done": true. Otherwise "done": false.',
+        NO_JA,
+        'Reply with only JSON, no other text, in this shape:',
+        '{"reply":string,"correction":{"has":boolean,"original":string,"fixed":string,"why_zh":string}|null,"suggestions":[string,string],"done":boolean}',
+        'Example: {"reply":"Okay. What\'s blocking you right now?","correction":{"has":true,"original":"We finish phase one","fixed":"We\'ve finished phase one.","why_zh":"已經完成的事用現在完成式"},"suggestions":["The main blocker is the firmware fix.","We\'re still waiting for the vendor."],"done":false}'
+      ].join('\n');
+    },
+    summary: function (scn, transcript) {
+      return [
+        'You are an English speaking coach. ' + LEARNER,
+        'Here is a role-play the learner just finished. Scenario: ' + scn.title + '. Goals: ' + scn.roleplay.goals.join('; ') + '.',
+        'Target chunks: ' + scn.chunks.map(function (c) { return c.en; }).join(' | '),
+        'Transcript:', transcript,
+        'Give feedback on the LEARNER only. "good": exactly 3 things they did well; "improve": exactly 2 things to fix, each with a better English example. Write good/improve in Chinese, keep English examples in English. "chunks_used": the target chunks they actually used. "score": 1-5 for how well they reached the goals.',
+        NO_JA,
+        'Reply with only JSON, no other text: {"good":[string,string,string],"improve":[string,string],"chunks_used":[string],"score":number}',
+        'Example: {"good":["開場清楚說明進度","有用到 The main blocker is…","語氣禮貌"],"improve":["時態：說 We\'ve finished，不要說 We finish","提出下一步時更具體，例如 We\'ll rerun the test on Friday."],"chunks_used":["The main blocker is…"],"score":4}'
+      ].join('\n');
+    },
+    custom: function (desc) {
+      return [
+        'Create a short speaking lesson for this real situation the learner will face: "' + desc + '"',
+        LEARNER,
+        'Make 4 chunks (real multi-word chunks or collocations people say in meetings, not single words), each with Chinese meaning and one example sentence about this situation.',
+        'Make 4 drills: a Chinese sentence the learner should say in English, a short English hint (the chunk), and a natural English reference answer.',
+        'Make a role-play: who the partner is (role and a name), the partner\'s opening line, 3 short goals, and 3 follow-up questions the partner would ask.',
+        'English at B1-B2 level, natural and spoken. ' + NO_JA,
+        'Reply with only JSON, no other text, in this shape:',
+        '{"title":string,"titleZh":string,"chunks":[{"en":string,"zh":string,"ex":string}],"drills":[{"zh":string,"hint":string,"en":string}],"roleplay":{"partner":string,"opening":string,"goals":[string],"followups":[string]}}',
+        'Example of one chunk: {"en":"Let me walk you through…","zh":"讓我帶大家看一下…","ex":"Let me walk you through the roaming test results."}'
+      ].join('\n');
+    },
+    freeTalk: function () {
+      return [
+        'You are Alex, a friendly coworker chatting with the learner over coffee. ' + LEARNER,
+        'Talk about anything they bring up. Each learner message starts with a tag like [Learner message 3]; the tag is not part of what they said.',
+        'Rules: "reply" is 1-2 short sentences in natural spoken English (B1-B2), usually ending with a question. Check ONLY the learner\'s latest message: if it has a real mistake or clearly unnatural wording, set "correction" to {"has":true,"original":<wrong part>,"fixed":<natural whole sentence>,"why_zh":<short reason in Chinese, max 40 characters>}; if it is natural B1-B2 English, "correction" MUST be null (do not nitpick, and never return a "fixed" that equals what the learner wrote). "suggestions": exactly 2 short things the learner could say next. "done" is always false.',
+        NO_JA,
+        'Reply with only JSON, no other text: {"reply":string,"correction":{"has":boolean,"original":string,"fixed":string,"why_zh":string}|null,"suggestions":[string,string],"done":false}',
+        'Example: {"reply":"Nice! Did you go anywhere fun?","correction":null,"suggestions":["We went to a night market.","I just stayed home and rested."],"done":false}'
+      ].join('\n');
+    }
+  };
+
+  // ---------- 語音：朗讀（TTS）與辨識 ----------
+  // quiet：自動朗讀時用，不支援也不跳提示
+  function speak(text, quiet) {
+    if (!('speechSynthesis' in window)) { if (!quiet) toast('這個瀏覽器不支援朗讀。'); return; }
+    try {
+      speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(String(text).replace(/…/g, ' '));
+      u.lang = 'en-US'; u.rate = S.profile.settings.speed || 1;
+      var vs = speechSynthesis.getVoices() || [];
+      var v = vs.filter(function (x) { return x.name === S.profile.settings.voice; })[0] ||
+        vs.filter(function (x) { return /^en[-_]US/i.test(x.lang); })[0];
+      if (v) u.voice = v;
+      speechSynthesis.speak(u);
+    } catch (e) { if (!quiet) toast('朗讀失敗。'); }
+  }
+  // iOS Safari：speechSynthesis 第一次必須在使用者手勢裡呼叫，之後非同步的自動朗讀才會出聲
+  var speechWarm = false;
+  function warmSpeech() {
+    if (speechWarm || !S.cfg.autoSpeak || !('speechSynthesis' in window)) return;
+    speechWarm = true;
+    try { var u = new SpeechSynthesisUtterance(' '); u.volume = 0; u.lang = 'en-US'; speechSynthesis.speak(u); } catch (e) {}
+  }
+  // AI 夥伴的回覆進來：autoSpeak 開著就自動朗讀
+  function autoSay(text) { if (S.cfg.autoSpeak && text) speak(text, true); }
+
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  function micOK() { return !!SR && !S.micBlocked && S.profile.settings.mode === 'voice'; }
+  var rec = null, recSess = null;
+  // 離開畫面時用：直接取消，這次聽到的不填
+  function stopMic() {
+    if (recSess) recSess.cancelled = true;
+    if (rec) { try { rec.abort(); } catch (e) {} }
+    rec = null; recSess = null; S.listening = null; S.heard = '';
+  }
+  function micErrMsg(c) {
+    if (c === 'not-allowed') return '瀏覽器沒有麥克風權限。iPhone：設定 → Safari → 麥克風；電腦：網址列左邊的鎖頭。改好後重新整理頁面。';
+    if (c === 'service-not-allowed') return '語音辨識服務沒有開。iPhone：設定 → 一般 → 鍵盤 → 開啟「聽寫」；電腦：網址列左邊的鎖頭 → 麥克風允許。';
+    if (c === 'audio-capture') return '找不到麥克風，請確認裝置有麥克風且沒有被其他程式占用。';
+    if (c === 'no-speech') return '沒有聽到聲音，再試一次。';
+    if (c === 'network') return '語音辨識需要網路，請確認連線後再試。';
+    return '';
+  }
+  // key：這次錄音的識別；path：結果填進哪個文字框；compare：跟讀時要比對的英文
+  function startMic(key, path, compare) {
+    if (!micOK()) return;
+    if (rec) {
+      var same = S.listening === key;
+      if (same) { try { rec.stop(); } catch (e) {} return; } // 再按一次＝停止，已聽到的照樣填入（onend 處理）
+      stopMic(); render();
+    }
+    var sess = { cancelled: false, fin: '', inter: '' };
+    var base = path ? String(getPath(path) || '').replace(/\s+$/, '') : '';
+    var fill = function (t) {
+      if (!path) return;
+      var v = base ? base + ' ' + t : t;
+      setPath(path, v);
+      var el = document.querySelector('[data-bind="' + path + '"]'); if (el) el.value = v;
+    };
+    try {
+      var r = new SR(); r.lang = 'en-US'; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+      r.onresult = function (e) {
+        if (sess.cancelled) return;
+        var fin = '', inter = '', res = e.results || [];
+        for (var i = 0; i < res.length; i++) {
+          var x = res[i], t = (x && x[0] && x[0].transcript) || '';
+          if (x && x.isFinal) fin += t; else inter += t;
+        }
+        sess.fin = fin.trim(); sess.inter = inter.trim();
+        var live = (sess.fin + ' ' + sess.inter).trim();
+        if (!live) return;
+        S.heard = live; fill(live);
+        var lv = $('micLive'); if (lv) lv.lastChild.textContent = live;
+      };
+      r.onerror = function (e) {
+        var c = e && e.error;
+        if (c === 'audio-capture') S.micBlocked = true;
+        if (c === 'aborted') return;
+        var m = micErrMsg(c);
+        if (m) { S.micMsg = (c === 'no-speech') ? '' : m; toast(m, c === 'no-speech' ? 3200 : 9000); }
+      };
+      r.onend = function () {
+        if (rec === r) { rec = null; recSess = null; S.listening = null; }
+        if (sess.cancelled) return;
+        // iOS Safari 常常只給 interim 不給 final：沒有 final 就用最後一段 interim
+        var t = (sess.fin + ' ' + sess.inter).trim() || sess.inter;
+        if (t) {
+          fill(t); S.micMsg = '';
+          if (compare) S.shadow[key] = { heard: t, pct: DEC.wordSimilarity(t, compare) };
+        }
+        S.heard = '';
+        render();
+      };
+      rec = r; recSess = sess; S.listening = key; S.heard = '';
+      r.start(); render();
+    } catch (e) { rec = null; recSess = null; S.listening = null; S.micBlocked = true; render(); }
+  }
+
+  // ---------- 文字框綁定（避免重繪時掉字） ----------
+  function getPath(p) { return p.split('.').reduce(function (o, k) { return o == null ? undefined : o[k]; }, S); }
+  function setPath(p, v) {
+    var ks = p.split('.'), o = S;
+    for (var i = 0; i < ks.length - 1; i++) { if (o[ks[i]] == null) return; o = o[ks[i]]; }
+    o[ks[ks.length - 1]] = v;
+  }
+
+  // ---------- toast ----------
+  var toastT = null;
+  function toast(msg, ms) {
+    var t = $('toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, ms || 3200);
+  }
+
+  // ---------- 共用小元件 ----------
+  function ring(pct, label) {
+    var r = 36, c = 2 * Math.PI * r, off = c * (1 - pct);
+    return '<svg class="ring" viewBox="0 0 90 90" role="img" aria-label="今日進度 ' + Math.round(pct * 100) + '%">' +
+      '<circle class="bgc" cx="45" cy="45" r="' + r + '"/>' +
+      '<circle class="fgc" cx="45" cy="45" r="' + r + '" stroke-dasharray="' + c.toFixed(1) + '" stroke-dashoffset="' + off.toFixed(1) + '" transform="rotate(-90 45 45)"/>' +
+      '<text x="45" y="53" text-anchor="middle">' + h(label) + '</text></svg>';
+  }
+  function micBtn(key, path, compare, label) {
+    if (!micOK()) return '';
+    var on = S.listening === key;
+    // 錄音中：紅色脈動按鈕＋「聽你說…」即時字幕（iOS 第一次會先跳系統的麥克風詢問）
+    return '<button class="btn sm ' + (on ? 'rec' : '') + '" data-act="mic" data-key="' + h(key) + '" data-path="' + h(path || '') + '" data-compare="' + h(compare || '') + '" aria-pressed="' + on + '">' +
+      (on ? I.stop + ' 聽你說…（點我停止）' : I.mic + ' ' + (label || '說說看')) + '</button>' +
+      (on ? '<div id="micLive" class="live" role="status" style="flex-basis:100%"><span class="rdot" aria-hidden="true"></span><span>' + h(S.heard || '聽你說…請開口') + '</span></div>' : '');
+  }
+  function playBtn(text, label) {
+    return '<button class="btn sm" data-act="speak" data-text="' + h(text) + '">' + I.play + ' ' + h(label || '播放') + '</button>';
+  }
+  function aiBusy(job, label) {
+    return '<div class="row"><span class="thinking">' + h(label || 'Thinking…') + '</span><button class="btn sm" data-act="stopai">' + I.stop + ' 停止</button></div>';
+  }
+  function errBox(job, retryAct) {
+    if (!job || !job.err || !job.err.msg) return '';
+    var retry = retryAct && ['rate_limited', 'bad_key', 'not_granted'].indexOf(job.err.code) < 0 ? '<button class="btn sm" data-act="' + retryAct + '">再試一次</button>' : '';
+    return '<div class="note bad row between"><span>' + h(job.err.msg) + '</span>' + retry + '</div>';
+  }
+  var STEP_LABEL = { warm: '① Warm-up', learn: '② Learn', practice: '③ Practice', apply: '④ Apply' };
+  var STEP_ZH = { warm: '複習詞組', learn: '學新詞組', practice: '開口練習', apply: '角色扮演' };
+
+  // ================= 首頁 =================
+  function homeMessage(st, t) {
+    var p = S.profile, d = S.days[t];
+    if (st.state === 'done') {
+      var tm = DEC.pickScenario(LIB, DEC.addDays(t, 1), 0);
+      return { cls: 'ok', text: '今天完成了！明天預告：' + tm.title + '（' + tm.titleZh + '）' };
+    }
+    var remain = d ? DEC.STEPS.filter(function (k) { return !d.steps[k]; }) : [];
+    var partial = d && remain.length < 4 ? '今日未完成：還剩 ' + remain.map(function (k) { return STEP_LABEL[k]; }).join('、') + '。' : '';
+    if (st.state === 'new') return { cls: 'info', text: partial || '第一次來！做完今天這一課，訊號小鳥就會破殼。' };
+    if (st.state === 'freeze') return { cls: 'warn', text: '漏了 ' + st.missed + ' 天。今天完成會自動用掉 ' + st.missed + ' 張凍結卡，連續 ' + p.streak + ' 天不中斷。' + (partial ? ' ' + partial : '') };
+    if (st.state === 'broken') return { cls: 'bad', text: '連續紀錄中斷了（最長 ' + p.longest + ' 天，紀錄會保留）。今天完成就從第 1 天重新開始。' + (partial ? ' ' + partial : '') };
+    return { cls: 'info', text: partial || ('已連續 ' + p.streak + ' 天，今天完成就是第 ' + (p.streak + 1) + ' 天。') };
+  }
+  function renderHome() {
+    var t = today(), p = S.profile, st = DEC.streakStatus(p, t);
+    var scn = scenarioFor(t), d = S.days[t];
+    var done = d ? DEC.STEPS.filter(function (k) { return d.steps[k]; }).length : 0;
+    var lv = DEC.nextLevelInfo(p.totalDays);
+    var lvPct = lv.next ? Math.max(4, Math.round(100 * (p.totalDays - lv.from) / Math.max(1, lv.to - lv.from))) : 100;
+    var msg = homeMessage(st, t);
+    var started = d && d.steps.learn;
+    var aiNote = S.aiState === 'off' ? '<div class="note warn small">' + h(S.aiOffMsg) + '</div>' : '';
+    var freezeIc = '';
+    for (var i = 0; i < DEC.FREEZE_MAX; i++) freezeIc += '<span style="color:' + (i < p.freezes ? 'var(--accent)' : 'var(--line)') + '">' + I.snow + '</span>';
+    var o = '';
+    o += '<section class="card hero" aria-label="連續天數">' +
+      '<div class="mascot">' + birdSVG(p.level) + '</div>' +
+      '<div class="stack-s" style="min-width:0">' +
+        '<div class="streak"><span style="display:inline-flex">' + I.flame + '</span><span class="num">' + st.effective + '</span><small>天連續</small></div>' +
+        '<div class="small">Lv' + p.level + ' ' + h(LEVEL_NAMES[p.level]) + (lv.next ? '，再 <b class="num">' + lv.daysLeft + '</b> 天升級' : '，已滿級') + '</div>' +
+        '<div class="lvbar" aria-hidden="true"><i style="width:' + lvPct + '%"></i></div>' +
+        '<div class="row small muted" style="gap:6px"><span class="freeze" aria-label="凍結卡 ' + p.freezes + ' 張">' + freezeIc + '</span>凍結卡 ' + p.freezes + '/2 · 最長 ' + p.longest + ' 天</div>' +
+      '</div></section>';
+    o += '<div class="note ' + msg.cls + '">' + h(msg.text) + '</div>';
+    o += aiNote;
+    // 今日任務卡
+    var tag = scn.type === 'custom' ? '自訂情境' : (scn.type === 'work' ? '職場' : '日常');
+    o += '<section class="card stack" aria-label="今日任務">' +
+      '<div class="today"><div class="stack-s" style="min-width:0">' +
+        '<div class="row" style="gap:8px"><span class="label">今日任務 · ' + h(t) + '</span><span class="tag">' + tag + '</span></div>' +
+        '<h1>' + h(scn.title) + '</h1><div class="zh">' + h(scn.titleZh) + ' · 約 10 分鐘</div></div>' +
+        ring(done / 4, done + '/4') + '</div>' +
+      '<ul class="steps">' + DEC.STEPS.map(function (k) {
+        var ok = d && d.steps[k];
+        return '<li class="' + (ok ? 'done' : '') + '"><span class="ck">' + (ok ? I.check : '') + '</span><span><b>' + STEP_LABEL[k] + '</b> <span class="zh">' + STEP_ZH[k] + '</span></span></li>';
+      }).join('') + '</ul>' +
+      '<button class="btn primary block" data-act="startLesson">' + (st.state === 'done' ? '再練一次今天的課' : done ? '繼續今天的課' : '開始今天的課') + '</button>' +
+      '<div class="row">' +
+        '<button class="btn sm" data-act="swap" ' + (started ? 'disabled' : '') + '>換一個情境</button>' +
+        '<button class="btn sm" data-act="toggleCustom" ' + (started ? 'disabled' : '') + '>自訂情境</button>' +
+        (started ? '<span class="small muted">今天已開始，明天再換</span>' : '') +
+      '</div>' + renderCustomBox() + '</section>';
+    o += renderCalendar(t);
+    return o;
+  }
+  function renderCustomBox() {
+    if (!S.showCustom) return '';
+    if (S.aiState !== 'on') return '<div class="note warn small">自訂情境需要 AI 家教，請到「我」→〈連線設定〉貼上 Gemini key。</div>';
+    var j = S.customJob;
+    return '<div class="card flat stack-s">' +
+      '<label class="small" for="customText">用一句話描述你接下來要面對的場合（中英文都可以）</label>' +
+      '<textarea id="customText" data-bind="customText" placeholder="例如：明天要跟原廠報告 WiFi 7 漫遊測試結果">' + h(S.customText) + '</textarea>' +
+      (j.busy ? aiBusy(j, '正在幫你編課程…（約 10–60 秒）') : '<button class="btn primary" data-act="makeCustom">產生今天的課</button>') +
+      errBox(j, 'makeCustom') + '</div>';
+  }
+  function renderCalendar(t) {
+    var base = t.split('-').map(Number);
+    var y = base[0], m = base[1] - 1 + S.calOffset;
+    y += Math.floor(m / 12); m = ((m % 12) + 12) % 12;
+    var first = y + '-' + String(m + 1).padStart(2, '0') + '-01';
+    var startW = DEC.weekday(first);
+    var nDays = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    var o = '<section class="card stack" aria-label="月曆"><div class="row between"><h2>' + y + ' 年 ' + (m + 1) + ' 月</h2><div class="row" style="gap:6px">' +
+      '<button class="btn sm" data-act="calPrev" aria-label="上個月">‹</button><button class="btn sm" data-act="calNext" aria-label="下個月" ' + (S.calOffset >= 0 ? 'disabled' : '') + '>›</button></div></div>';
+    o += '<div class="cal">' + ['日', '一', '二', '三', '四', '五', '六'].map(function (w) { return '<div class="wd">' + w + '</div>'; }).join('');
+    for (var i = 0; i < startW; i++) o += '<div></div>';
+    for (var dd = 1; dd <= nDays; dd++) {
+      var ds = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(dd).padStart(2, '0');
+      var rec = S.days[ds], cls = [];
+      if (rec && rec.steps.apply) cls.push('done');
+      else if (rec && rec.frozen) cls.push('frozen');
+      else if (rec && DEC.STEPS.some(function (k) { return rec.steps[k]; })) cls.push('part');
+      if (ds === t) cls.push('today');
+      if (ds > t) cls.push('fut');
+      if (ds === S.calSel) cls.push('sel');
+      o += '<button class="' + cls.join(' ') + '" data-act="calDay" data-date="' + ds + '" aria-label="' + ds + '">' + dd + '</button>';
+    }
+    o += '</div><div class="legend"><span><i style="background:var(--accent)"></i>完成</span><span><i style="background:var(--accent);opacity:.42"></i>凍結卡補上</span><span><i style="background:var(--accent-soft)"></i>做一半</span><span><i style="outline:3px solid var(--flame);outline-offset:-3px"></i>今天</span></div>';
+    if (S.calSel) {
+      var r = S.days[S.calSel];
+      if (!r) o += '<div class="note info small">' + h(S.calSel) + '：這天沒有紀錄。</div>';
+      else if (r.frozen) o += '<div class="note info small">' + h(S.calSel) + '：用凍結卡補上，連續天數沒有中斷。</div>';
+      else {
+        var sc = r.custom || scnById(r.scenarioId);
+        var title = r.title || (sc ? sc.title + '（' + sc.titleZh + '）' : '自訂情境');
+        var steps = DEC.STEPS.filter(function (k) { return r.steps[k]; }).map(function (k) { return STEP_LABEL[k]; }).join('、') || '尚未完成任何步驟';
+        o += '<div class="card flat stack-s small"><b>' + h(S.calSel) + ' · ' + h(title) + '</b><span>完成：' + h(steps) + '</span>' +
+          (r.score ? '<span>分數：' + r.score + ' / 5' + (r.minutes ? ' · 約 ' + r.minutes + ' 分鐘' : '') + '</span>' : '') +
+          (r.summary ? '<span class="muted" style="white-space:pre-line">' + h(r.summary) + '</span>' : '') + '</div>';
+      }
+    }
+    return o + '</section>';
+  }
+
+  // ================= 課程 =================
+  function openLesson() {
+    var t = today(), scn = scenarioFor(t), d = ensureDay(t);
+    if (!d.scenarioId) d.scenarioId = scn.id;
+    var first = DEC.STEPS.filter(function (k) { return !d.steps[k]; })[0] || 'warm';
+    S.lesson = {
+      date: t, scn: scn, step: first, startedAt: Date.now(),
+      warm: { ids: DEC.pickDue(S.chunks, t, 3), i: 0, shown: false },
+      practice: { i: 0, round: 1, answer: '', result: null, r3: '', r3res: null, busy: false, err: null, oks: 0 },
+      apply: newApply(scn)
+    };
+    S.view = 'lesson'; S.tab = 'today';
+  }
+  function newApply(scn) {
+    return { msgs: [{ who: 'partner', text: scn.roleplay.opening }], turns: [], input: '', count: 0, line: 0,
+      suggestions: [], done: false, busy: false, err: null, summary: null, sumJob: { busy: false, err: null }, selfScore: 3, mode: null, started: false };
+  }
+  function markStep(step) {
+    var L = S.lesson, d = ensureDay(L.date);
+    if (!d.steps[step]) { d.steps[step] = true; saveDay(L.date); }
+  }
+  function nextStep() {
+    var L = S.lesson, d = S.days[L.date];
+    var order = DEC.STEPS, idx = order.indexOf(L.step);
+    var rest = order.slice(idx + 1).concat(order.slice(0, idx)).filter(function (k) { return !d.steps[k]; });
+    L.step = rest[0] || 'apply';
+    window.scrollTo(0, 0);
+  }
+  function renderLesson() {
+    var L = S.lesson, d = S.days[L.date] || DEC.newDay(L.scn.id);
+    var o = '<div class="row between"><button class="btn ghost sm" data-act="home">' + I.back + ' 首頁</button><span class="small muted">' + h(L.scn.title) + '</span></div>';
+    o += '<nav class="stepper" aria-label="課程步驟">' + DEC.STEPS.map(function (k) {
+      var cls = (L.step === k ? 'cur ' : '') + (d.steps[k] ? 'done' : '');
+      return '<button class="' + cls + '" data-act="goStep" data-step="' + k + '" aria-current="' + (L.step === k ? 'step' : 'false') + '">' + STEP_LABEL[k] + '<br><span style="font-weight:400">' + (d.steps[k] ? '完成' : STEP_ZH[k]) + '</span></button>';
+    }).join('') + '</nav>';
+    if (L.step === 'warm') o += renderWarm();
+    else if (L.step === 'learn') o += renderLearn();
+    else if (L.step === 'practice') o += renderPractice();
+    else o += renderApply();
+    return o;
+  }
+
+  // ① Warm-up：到期詞組 3 張
+  function renderWarm() {
+    var w = S.lesson.warm;
+    if (!w.ids.length) {
+      return '<section class="card stack"><h2>① Warm-up</h2><p>今天沒有到期要複習的詞組。完成今天的課之後，詞組會進複習庫，明天開始在這裡出現。</p>' +
+        '<button class="btn primary" data-act="warmSkip">跳過，開始學新詞組</button></section>';
+    }
+    if (w.i >= w.ids.length) {
+      return '<section class="card stack"><h2>① Warm-up 完成</h2><p>複習了 ' + w.ids.length + ' 個詞組，下次出現的時間已經依你的答對狀況調整。</p><button class="btn primary" data-act="next">下一步：學新詞組</button></section>';
+    }
+    var c = S.chunks[w.ids[w.i]];
+    var o = '<section class="card stack"><div class="row between"><h2>① Warm-up</h2><span class="small muted num">' + (w.i + 1) + ' / ' + w.ids.length + '</span></div>' +
+      '<p class="zh" style="font-size:18px;color:var(--ink)">' + h(c.zh) + '</p><p class="small muted">先在心裡（或開口）說出英文，再看答案。</p>';
+    if (!w.shown) o += '<button class="btn primary" data-act="warmShow">看答案</button>';
+    else o += '<div class="card flat stack-s"><div class="chunk-en">' + h(c.en) + '</div><div class="ex">' + h(c.ex) + '</div><div class="row">' + playBtn(c.ex) + '</div></div>' +
+      '<div class="row"><button class="btn primary" data-act="warmGrade" data-ok="1">' + I.check + ' 記得</button><button class="btn" data-act="warmGrade" data-ok="0">' + I.x + ' 忘了</button></div>';
+    return o + '</section>';
+  }
+  // ② Learn：4 個 chunks
+  function renderLearn() {
+    var scn = S.lesson.scn;
+    var o = '<section class="stack"><div class="card stack-s"><h2>② Learn</h2><p class="small muted">聽兩次、跟著唸一次。點星號可以先收進複習庫（完成今天的課也會自動收進去）。</p></div>';
+    scn.chunks.forEach(function (c, i) {
+      var id = chunkId(scn, i), saved = !!S.chunks[id], key = 'learn-' + i, sh = S.shadow[key];
+      o += '<article class="card stack-s"><div class="row between" style="align-items:flex-start;flex-wrap:nowrap"><div style="min-width:0"><div class="chunk-en">' + h(c.en) + '</div><div class="zh">' + h(c.zh) + '</div></div>' +
+        '<button class="btn sm ghost" data-act="star" data-i="' + i + '" aria-pressed="' + saved + '" aria-label="收藏">' + (saved ? I.starOn : I.star) + '</button></div>' +
+        '<div class="ex">' + h(c.ex) + '</div>' +
+        '<div class="row">' + playBtn(c.en, '詞組') + playBtn(c.ex, '例句') + micBtn(key, '', c.ex, '跟讀例句') + '</div>' +
+        (sh ? '<div class="res ' + (sh.pct >= 70 ? 'ok' : 'no') + ' small">聽到：「' + h(sh.heard) + '」· 相似度 <b class="num">' + sh.pct + '%</b></div>' : '') +
+        '</article>';
+    });
+    o += '<button class="btn primary block" data-act="learnDone">我學好了，下一步：開口練習</button></section>';
+    return o;
+  }
+  // ③ Practice：每題三輪（快答 → 跟讀自然說法 → 默寫正確句子）
+  function renderPractice() {
+    var L = S.lesson, p = L.practice, drills = L.scn.drills;
+    if (p.i >= drills.length) {
+      return '<section class="card stack"><h2>③ Practice 完成</h2><p>' + drills.length + ' 題裡第一輪就說對 <b class="num">' + p.oks + '</b> 題。</p><button class="btn primary" data-act="next">下一步：角色扮演</button></section>';
+    }
+    var d = drills[p.i], ai = S.aiState === 'on';
+    var o = '<section class="card stack"><div class="row between"><h2>③ Practice</h2><span class="small muted num">第 ' + (p.i + 1) + ' / ' + drills.length + ' 題</span></div>' +
+      '<div class="rounds" aria-label="第 ' + p.round + ' 輪"><span class="on"></span><span class="' + (p.round >= 2 ? 'on' : '') + '"></span><span class="' + (p.round >= 3 ? 'on' : '') + '"></span></div>';
+    var ref = (p.result && p.result.better) || d.en;
+    if (p.round === 1) {
+      o += '<div class="label">第 1 輪 · 流暢：看中文，馬上說</div><p style="font-size:20px;font-family:var(--f-zh)">' + h(d.zh) + '</p><p class="small muted">提示：' + h(d.hint) + '</p>';
+      if (!p.result) {
+        o += '<div class="timer" aria-hidden="true"><i></i></div>' +
+          '<textarea id="pAns" data-bind="lesson.practice.answer" placeholder="Say it or type it in English…">' + h(p.answer) + '</textarea>' +
+          '<div class="row">' + micBtn('p-ans', 'lesson.practice.answer', '', '說說看') + '</div>';
+        if (p.busy) o += aiBusy(p, 'AI 家教在看你的句子…');
+        else if (ai) o += '<div class="row"><button class="btn primary" data-act="pSubmit">送出</button><button class="btn ghost sm" data-act="pReveal">直接看參考答案</button></div>';
+        else o += '<div class="row"><button class="btn primary" data-act="pReveal">看參考答案（自評）</button></div>';
+        o += errBox(p, 'pSubmit');
+      } else {
+        var r = p.result;
+        if (r.self && r.ok === null) {
+          o += '<div class="card flat stack-s"><div class="label">參考答案</div><div class="big-en">' + h(d.en) + '</div>' + (p.answer ? '<div class="small muted">你說的：' + h(p.answer) + '</div>' : '') + '</div>' +
+            '<div class="row"><button class="btn primary" data-act="pSelf" data-ok="1">' + I.check + ' 我說對了</button><button class="btn" data-act="pSelf" data-ok="0">' + I.x + ' 差一點</button></div>';
+        } else {
+          o += '<div class="res ' + (r.ok ? 'ok' : 'no') + ' stack-s"><b>' + (r.ok ? '可以接受！' : '意思還差一點') + '</b>' +
+            (p.answer ? '<span class="small">你說的：' + h(p.answer) + '</span>' : '') +
+            '<span>更自然的說法：<b>' + h(r.better || d.en) + '</b></span>' + (r.note_zh ? '<span class="small">為什麼：' + h(r.note_zh) + '</span>' : '') + '</div>' +
+            '<div class="row"><button class="btn primary" data-act="pRound" data-r="2">下一輪：跟讀</button><button class="btn ghost sm" data-act="pNextDrill">跳到下一題</button></div>';
+        }
+      }
+    } else if (p.round === 2) {
+      var key = 'p-shadow-' + p.i, sh = S.shadow[key];
+      o += '<div class="label">第 2 輪 · 自然：聽一次，跟著唸</div><div class="big-en">' + h(ref) + '</div>' +
+        '<div class="row">' + playBtn(ref) + micBtn(key, '', ref, '跟讀') + '</div>' +
+        (sh ? '<div class="res ' + (sh.pct >= 70 ? 'ok' : 'no') + ' small">聽到：「' + h(sh.heard) + '」· 相似度 <b class="num">' + sh.pct + '%</b></div>' : '') +
+        '<div class="row"><button class="btn primary" data-act="pRound" data-r="3">下一輪：默寫</button><button class="btn ghost sm" data-act="pNextDrill">跳到下一題</button></div>';
+    } else {
+      o += '<div class="label">第 3 輪 · 正確：不看答案，完整說／寫一次</div><p style="font-size:20px;font-family:var(--f-zh)">' + h(d.zh) + '</p>' +
+        '<textarea id="pR3" data-bind="lesson.practice.r3" placeholder="Type the full sentence…">' + h(p.r3) + '</textarea>' +
+        '<div class="row">' + micBtn('p-r3', 'lesson.practice.r3', '', '說說看') + '</div>';
+      if (!p.r3res) o += '<button class="btn primary" data-act="pCheck3">對答案</button>';
+      else o += '<div class="res ' + (p.r3res >= 80 ? 'ok' : 'no') + ' stack-s"><span>和目標句的相似度 <b class="num">' + p.r3res + '%</b>' + (p.r3res >= 80 ? '，很接近了！' : '，再看一次：') + '</span><b>' + h(ref) + '</b></div>' +
+        '<button class="btn primary" data-act="pNextDrill">' + (p.i + 1 < drills.length ? '下一題' : '完成 Practice') + '</button>';
+    }
+    return o + '</section>';
+  }
+  // ④ Apply：角色扮演
+  function renderApply() {
+    var L = S.lesson, a = L.apply, scn = L.scn, rp = scn.roleplay;
+    var ai = S.aiState === 'on';
+    if (!a.mode) a.mode = ai ? 'ai' : 'self';
+    if (a.mode === 'ai' && !ai && !a.done) a.mode = 'self';
+    var o = '<section class="card stack-s"><h2>④ Apply</h2><p class="small">對象：' + h(rp.partner) + '</p>' +
+      '<div class="small"><b>目標：</b>' + rp.goals.map(h).join(' → ') + '</div>' +
+      '<div class="row" style="gap:6px">' + scn.chunks.map(function (c) {
+        var used = a.msgs.some(function (m) { return m.who === 'me' && DEC.chunkUsed(m.text, c.en); });
+        return '<button class="chip ' + (used ? 'used' : '') + '" data-act="insert" data-text="' + h(c.en.replace(/…/g, ' ').trim()) + '">' + (used ? '✓ ' : '') + h(c.en) + '</button>';
+      }).join('') + '</div>' +
+      (a.mode === 'self' ? '<div class="note warn small">自評模式：對方的台詞是固定腳本，沒有即時修正。回完 ' + (rp.followups.length + 1) + ' 句後自己打分數就能打卡。</div>' : '<p class="small muted">AI 會在每一輪指出你上一句可以更自然的地方。大約 6 輪結束。</p>') +
+      '</section>';
+    // AI 模式先按「開始對話」：在這個手勢裡暖機 iOS 的朗讀，並朗讀對方的開場白
+    if (a.mode === 'ai' && !a.started) {
+      return o + '<section class="card stack"><p>' + h(partnerName(rp.partner)) + ' 會先開口。' + (S.cfg.autoSpeak ? '對方的每一句都會自動朗讀，請打開聲音。' : '') + (S.cfg.listenFirst ? '先聽模式開著：文字會先模糊，聽懂了再點開。' : '') + '</p>' +
+        '<button class="btn primary block" data-act="aStart">開始對話</button></section>';
+    }
+    o += '<section class="chat" aria-label="對話">';
+    a.msgs.forEach(function (m, idx) {
+      if (m.who === 'partner') o += partnerMsg(m, partnerName(rp.partner), 'a', idx);
+      else {
+        o += '<div class="msg me">' + h(m.text) + '</div>';
+        if (m.correction) o += '<div class="fix"><div><s>' + h(m.correction.original) + '</s></div><div>更自然：<b>' + h(m.correction.fixed) + '</b></div>' + (m.correction.why_zh ? '<div>為什麼：' + h(m.correction.why_zh) + '</div>' : '') + '</div>';
+      }
+    });
+    if (a.busy) o += aiBusy(a, partnerName(rp.partner) + ' is thinking…');
+    o += '</section>';
+    o += errBox(a, 'aRetry');
+    var finished = a.mode === 'self' ? a.line >= rp.followups.length + 1 : a.done;
+    if (!finished) {
+      if (a.suggestions.length) o += '<div class="stack-s"><span class="small muted">可以這樣回（點一下填入）：</span>' + a.suggestions.map(function (s) { return '<button class="chip" data-act="insert" data-replace="1" data-text="' + h(s) + '">' + h(s) + '</button>'; }).join('') + '</div>';
+      o += '<div class="stack-s"><textarea id="aIn" data-bind="lesson.apply.input" data-enter="aSend" placeholder="Type your reply… (Enter 送出，Shift+Enter 換行)" ' + (a.busy ? 'disabled' : '') + '>' + h(a.input) + '</textarea>' +
+        '<div class="row">' + micBtn('a-in', 'lesson.apply.input', '', '用說的') + '<button class="btn primary" data-act="aSend" ' + (a.busy ? 'disabled' : '') + '>送出</button>' +
+        (a.mode === 'ai' && a.count >= 3 && !a.busy ? '<button class="btn ghost sm" data-act="aEnd">結束對話</button>' : '') + '</div></div>';
+    } else if (a.mode === 'self') {
+      o += '<section class="card stack"><h3>自評</h3><p class="small">上面綠色的詞組是你有用到的。給今天的對話打個分數：</p><div class="row">' +
+        [1, 2, 3, 4, 5].map(function (n) { return '<button class="btn sm ' + (a.selfScore === n ? 'on' : '') + '" data-act="selfScore" data-n="' + n + '" aria-pressed="' + (a.selfScore === n) + '">' + n + '</button>'; }).join('') +
+        '</div><button class="btn flame block" data-act="finish">完成今天的課並打卡</button></section>';
+    } else {
+      if (!a.summary) {
+        o += '<section class="card stack"><h3>對話結束</h3>' + (a.sumJob.busy ? aiBusy(a.sumJob, '正在整理今天的回饋…') :
+          '<button class="btn primary" data-act="aSummary">看總結回饋</button><button class="btn ghost sm" data-act="finish">略過總結，直接打卡</button>') + errBox(a.sumJob, 'aSummary') + '</section>';
+      } else {
+        var s = a.summary;
+        o += '<section class="card stack"><h3>總結回饋 · <span class="num">' + s.score + '</span> / 5</h3>' +
+          '<div class="stack-s"><b>做得好</b>' + s.good.map(function (x) { return '<div class="res ok small">' + h(x) + '</div>'; }).join('') + '</div>' +
+          '<div class="stack-s"><b>要改進</b>' + s.improve.map(function (x) { return '<div class="res no small">' + h(x) + '</div>'; }).join('') + '</div>' +
+          (s.chunks_used.length ? '<div class="small muted">用到的詞組：' + s.chunks_used.map(h).join('、') + '</div>' : '') +
+          '<button class="btn flame block" data-act="finish">完成今天的課並打卡</button></section>';
+      }
+    }
+    return o;
+  }
+  // 對方的一句話：listenFirst 開著時先模糊（點文字顯示），旁邊一直有重播鍵
+  function partnerMsg(m, name, src, idx) {
+    var body = m.veil ? '<span class="veil" data-act="unveil" data-src="' + src + '" data-i="' + idx + '" role="button" tabindex="0" aria-label="點一下顯示文字">' + h(m.text) + '</span><span class="veil-hint">先聽，聽懂了再點文字顯示</span>' : h(m.text);
+    return '<div class="msg partner"><div class="who">' + h(name) + '</div>' + body + ' <button class="btn ghost sm" style="min-height:36px;padding:0 6px;vertical-align:middle" data-act="speak" data-text="' + h(m.text) + '" aria-label="重播">' + I.play + '</button></div>';
+  }
+  function partnerName(p) { var m = /\(([^)]+)\)/.exec(p); return m ? m[1] : 'Partner'; }
+
+  // ---- Practice 動作 ----
+  async function practiceSubmit() {
+    var p = S.lesson.practice, d = S.lesson.scn.drills[p.i];
+    var ans = (p.answer || '').trim();
+    if (!ans) { toast('先說或打一句英文。'); return; }
+    var r = await askJSON(PROMPTS.judge(d, ans), { modelTier: 'quick', cache: false }, p);
+    if (r != null) {
+      var v = DEC.validateJudge(r);
+      if (!v) p.err = { code: 'invalid_json', msg: aiErrMsg('invalid_json') };
+      else { p.result = v; if (v.ok) p.oks++; }
+    }
+    render();
+  }
+  function practiceNextDrill() {
+    var p = S.lesson.practice;
+    p.i++; p.round = 1; p.answer = ''; p.result = null; p.r3 = ''; p.r3res = null; p.err = null;
+    if (p.i >= S.lesson.scn.drills.length) markStep('practice');
+  }
+
+  // ---- Apply 動作 ----
+  async function applySend(retry) {
+    var L = S.lesson, a = L.apply, rp = L.scn.roleplay;
+    if (a.busy) return;
+    if (!retry) {
+      var text = (a.input || '').trim();
+      if (!text) { toast('先輸入一句回覆。'); return; }
+      a.input = ''; a.suggestions = [];
+      a.msgs.push({ who: 'me', text: text });
+      if (a.mode === 'self') {
+        a.line++;
+        if (a.line <= rp.followups.length) a.msgs.push({ who: 'partner', text: rp.followups[a.line - 1] });
+        render(); focusSoon('aIn'); return;
+      }
+      a.count++;
+      a.turns.push({ role: 'user', content: '[Learner message ' + a.count + '/6] ' + text });
+    }
+    // 最前面固定放規則；對話太長只保留最近 14 個 turn
+    var recent = a.turns.slice(-14);
+    var input = [{ role: 'user', content: PROMPTS.roleplay(L.scn) }].concat(recent);
+    var r = await askJSON(input, { modelTier: 'default', cache: false }, a);
+    if (S.lesson !== L) return;
+    if (r != null) {
+      var lastMe = ''; for (var k = a.msgs.length - 1; k >= 0; k--) if (a.msgs[k].who === 'me') { lastMe = a.msgs[k].text; break; }
+      var v = DEC.validateTurn(r, lastMe);
+      if (!v) a.err = { code: 'invalid_json', msg: aiErrMsg('invalid_json') };
+      else {
+        for (var i = a.msgs.length - 1; i >= 0; i--) if (a.msgs[i].who === 'me') { a.msgs[i].correction = v.correction; break; }
+        a.msgs.push({ who: 'partner', text: v.reply, veil: S.cfg.listenFirst });
+        autoSay(v.reply);
+        a.turns.push({ role: 'assistant', content: JSON.stringify(v) });
+        a.suggestions = v.suggestions;
+        if (v.done || a.count >= 6) a.done = true;
+      }
+    } else if (a.mode === 'ai' && S.aiState === 'off') {
+      a.mode = 'self'; a.line = Math.min(a.count, L.scn.roleplay.followups.length);
+    }
+    render(); focusSoon('aIn');
+  }
+  function transcriptOf(a, rp) {
+    return a.msgs.map(function (m) { return (m.who === 'me' ? 'Learner: ' : partnerName(rp.partner) + ': ') + m.text; }).join('\n').slice(-6000);
+  }
+  async function applySummary() {
+    var L = S.lesson, a = L.apply;
+    var r = await askJSON(PROMPTS.summary(L.scn, transcriptOf(a, L.scn.roleplay)), { modelTier: 'default', cache: false }, a.sumJob);
+    if (r != null) {
+      var v = DEC.validateSummary(r);
+      if (!v) a.sumJob.err = { code: 'invalid_json', msg: aiErrMsg('invalid_json') }; else a.summary = v;
+    }
+    render();
+  }
+
+  // ---- 打卡 ----
+  function finishLesson() {
+    var L = S.lesson, t = L.date, a = L.apply, scn = L.scn;
+    var d = ensureDay(t);
+    var newly = !d.steps.apply;
+    d.steps.apply = true;
+    d.frozen = false;
+    if (!d.scenarioId) d.scenarioId = scn.id;
+    d.title = scn.title + '（' + scn.titleZh + '）';
+    var score = a.summary ? a.summary.score : (a.mode === 'self' ? a.selfScore : 3);
+    d.score = Math.max(d.score, score);
+    d.minutes = Math.max(d.minutes, Math.min(60, Math.max(1, Math.round((Date.now() - L.startedAt) / 60000))));
+    if (a.summary) d.summary = '做得好：' + a.summary.good.join('；') + '\n要改進：' + a.summary.improve.join('；');
+    else if (!d.summary) d.summary = a.mode === 'self' ? '自評模式完成' : '';
+    // 把今天的 4 個 chunks 收進複習庫（明天 Warm-up 會出現）
+    var added = [];
+    scn.chunks.forEach(function (c, i) {
+      var id = chunkId(scn, i);
+      if (!S.chunks[id]) { S.chunks[id] = DEC.newChunk(c, scn.id, t); added.push(id); }
+    });
+    var r = DEC.computeCheckIn(S.profile, t);
+    S.profile = r.profile;
+    r.events.frozenDates.forEach(function (fd) {
+      if (!S.days[fd] || !S.days[fd].steps.apply) { var fdDay = DEC.newDay(''); fdDay.frozen = true; S.days[fd] = fdDay; saveDay(fd); }
+    });
+    var lb = DEC.libraryBadges(S.profile, Object.keys(S.chunks).length);
+    S.profile = lb.profile; r.events.newBadges = r.events.newBadges.concat(lb.newBadges);
+    saveDay(t);
+    added.forEach(saveChunk);
+    if (!r.events.already || lb.newBadges.length) saveProfile();
+    S.lastDone = { events: r.events, scn: scn, score: score, summary: a.summary, newly: newly };
+    S.lesson = null; S.view = 'done';
+    window.scrollTo(0, 0);
+  }
+
+  // ================= 完成畫面 =================
+  var BADGES = [
+    { id: 'd7', name: '連續 7 天', desc: '一週不中斷' }, { id: 'd30', name: '連續 30 天', desc: '一個月不中斷' },
+    { id: 'd100', name: '連續 100 天', desc: '一百天不中斷' }, { id: 'd365', name: '連續 365 天', desc: '整整一年' },
+    { id: 'custom1', name: '第一次自訂情境', desc: '為真實會議備課' }, { id: 'talk1', name: '第一次 Free Talk', desc: '自由聊天' },
+    { id: 'lib50', name: '複習庫 50 個', desc: '收集 50 個詞組' }];
+  function badgeName(id) { for (var i = 0; i < BADGES.length; i++) if (BADGES[i].id === id) return BADGES[i].name; return id; }
+  function shareText() {
+    var x = S.lastDone, p = S.profile;
+    return 'Daily English Coach｜連續 ' + p.streak + ' 天 ✓ 今天練了「' + x.scn.title + '（' + x.scn.titleZh + '）」，訊號小鳥 Lv' + p.level + ' ' + LEVEL_NAMES[p.level] + '。';
+  }
+  function renderDone() {
+    var x = S.lastDone, p = S.profile, ev = x.events;
+    var lv = DEC.nextLevelInfo(p.totalDays);
+    var o = '<section class="card celebrate">' + ring(1, '4/4') +
+      '<div class="mascot hop">' + birdSVG(p.level) + '</div>' +
+      '<div class="streak bump" style="justify-content:center"><span style="display:inline-flex">' + I.flame + '</span><span class="num">' + p.streak + '</span><small>天連續</small></div>' +
+      '<h1>' + (ev.already ? '今天已經打過卡了' : '今天完成了！') + '</h1>' +
+      '<p class="small">' + h(x.scn.title) + '（' + h(x.scn.titleZh) + '）· 分數 ' + x.score + ' / 5</p></section>';
+    var notes = [];
+    if (ev.freezeUsed) notes.push(['warn', ev.frozenDates.join('、') + ' 漏掉了，已自動用掉 ' + ev.freezeUsed + ' 張凍結卡，連續天數沒有中斷。剩 ' + p.freezes + ' 張。']);
+    if (ev.broke) notes.push(['bad', '之前的連續紀錄中斷了，今天重新從第 1 天開始。最長紀錄 ' + p.longest + ' 天保留著。']);
+    if (ev.earnedFreeze) notes.push(['ok', '連續 ' + p.streak + ' 天，獲得 1 張凍結卡（目前 ' + p.freezes + ' 張，最多 2 張）。']);
+    if (ev.levelUp) notes.push(['ok', '訊號小鳥升級了：Lv' + p.level + ' ' + LEVEL_NAMES[p.level] + '！']);
+    ev.newBadges.forEach(function (b) { notes.push(['ok', '獲得徽章：' + badgeName(b)]); });
+    if (lv.next) notes.push(['info', '再完成 ' + lv.daysLeft + ' 天升到 Lv' + lv.next + ' ' + LEVEL_NAMES[lv.next] + '。今天的 4 個詞組已收進複習庫，明天 Warm-up 見。']);
+    var o2 = notes.map(function (n) { return '<div class="note ' + n[0] + '">' + h(n[1]) + '</div>'; }).join('');
+    var tm = DEC.pickScenario(LIB, DEC.addDays(today(), 1), 0);
+    o2 += '<section class="card stack-s"><span class="label">明天預告</span><b>' + h(tm.title) + '</b><span class="zh">' + h(tm.titleZh) + '</span></section>';
+    o2 += '<section class="card stack-s"><span class="label">分享一句總結</span><textarea id="shareBox" class="share" readonly>' + h(shareText()) + '</textarea><div class="row"><button class="btn" data-act="copyShare">複製</button><button class="btn primary" data-act="home">回首頁</button></div></section>';
+    return o + o2;
+  }
+
+  // ================= 複習庫 =================
+  function renderReview() {
+    var ids = Object.keys(S.chunks).sort(function (a, b) { return S.chunks[a].srs.due < S.chunks[b].srs.due ? -1 : 1; });
+    var t = today(), due = ids.filter(function (id) { return S.chunks[id].srs.due <= t; }).length;
+    var r = S.rev;
+    var o = '<section class="card stack-s"><h1>複習庫</h1><p class="small muted">共 <b class="num">' + ids.length + '</b> 個詞組，今天到期 <b class="num">' + due + '</b> 個。這裡的練習不算打卡，但會更新複習時間。</p>' +
+      '<div class="row"><button class="btn ' + (r.mode === 'match' ? 'on' : '') + '" data-act="revMatch" ' + (ids.length < 4 ? 'disabled' : '') + '>配對練習</button>' +
+      '<button class="btn ' + (r.mode === 'make' ? 'on' : '') + '" data-act="revMake" ' + (ids.length < 1 ? 'disabled' : '') + '>造句</button>' +
+      (r.mode !== 'list' ? '<button class="btn ghost sm" data-act="revList">看清單</button>' : '') + '</div></section>';
+    if (!ids.length) return o + '<div class="note info">還沒有詞組。完成一天的課，或在 Learn 點星號，詞組就會出現在這裡。</div>';
+    if (r.mode === 'match' && r.match) o += renderMatch();
+    else if (r.mode === 'make' && r.make) o += renderMake();
+    else {
+      o += '<section class="list" aria-label="詞組清單">' + ids.map(function (id) {
+        var c = S.chunks[id];
+        return '<div class="li"><div><div style="font-weight:700">' + h(c.en) + '</div><div class="zh">' + h(c.zh) + ' · 下次複習 ' + h(c.srs.due) + '</div></div>' +
+          '<div class="row" style="flex-wrap:nowrap;gap:4px"><button class="btn sm ghost" data-act="speak" data-text="' + h(c.ex || c.en) + '" aria-label="播放">' + I.play + '</button>' +
+          '<button class="btn sm ghost" data-act="revDel" data-id="' + h(id) + '" aria-label="移除">' + I.x + '</button></div></div>';
+      }).join('') + '</section>';
+    }
+    return o;
+  }
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function newMatch() {
+    var t = today(), ids = Object.keys(S.chunks);
+    var dueFirst = DEC.pickDue(S.chunks, t, 4);
+    var pick = dueFirst.concat(shuffle(ids.filter(function (x) { return dueFirst.indexOf(x) < 0; }))).slice(0, 4);
+    return { ids: pick, en: shuffle(pick), zh: shuffle(pick), selEn: null, ok: [], wrong: null, miss: {} };
+  }
+  function renderMatch() {
+    var m = S.rev.match, done = m.ok.length === m.ids.length;
+    var o = '<section class="card stack"><h2>配對練習</h2><p class="small muted">先點英文，再點對應的中文。</p><div class="match">';
+    for (var i = 0; i < m.ids.length; i++) {
+      var e = m.en[i], z = m.zh[i];
+      o += '<button class="' + (m.ok.indexOf(e) >= 0 ? 'ok' : (m.selEn === e ? 'sel' : '')) + '" data-act="mEn" data-id="' + h(e) + '" ' + (m.ok.indexOf(e) >= 0 ? 'disabled' : '') + '>' + h(S.chunks[e].en) + '</button>';
+      o += '<button class="' + (m.ok.indexOf(z) >= 0 ? 'ok' : (m.wrong === z ? 'bad' : '')) + '" data-act="mZh" data-id="' + h(z) + '" ' + (m.ok.indexOf(z) >= 0 ? 'disabled' : '') + '>' + h(S.chunks[z].zh) + '</button>';
+    }
+    o += '</div>';
+    if (done) o += '<div class="note ok">全部配對完成！複習時間已更新。</div><button class="btn primary" data-act="revMatch">再來一組</button>';
+    return o + '</section>';
+  }
+  function renderMake() {
+    var mk = S.rev.make, c = S.chunks[mk.id];
+    if (!c) { S.rev.mode = 'list'; return ''; }
+    var o = '<section class="card stack"><h2>造句</h2><div class="chunk-en">' + h(c.en) + '</div><div class="zh">' + h(c.zh) + '</div>' +
+      '<p class="small muted">用這個詞組說一句跟你工作或生活有關的話。</p>' +
+      '<textarea id="mkIn" data-bind="rev.make.input" placeholder="Your sentence…">' + h(mk.input) + '</textarea>' +
+      '<div class="row">' + micBtn('mk', 'rev.make.input', '', '說說看') + '<button class="btn primary" data-act="mkCheck">檢查</button><button class="btn ghost sm" data-act="revMake">換一個</button></div>';
+    if (mk.res != null) o += '<div class="res ' + (mk.res ? 'ok' : 'no') + '">' + (mk.res ? '有用到這個詞組，很好！複習時間已更新。' : '句子裡好像沒有完整用到「' + h(c.en) + '」，再試一次。') + '</div><div class="small muted">參考例句：' + h(c.ex) + '</div>';
+    return o + '</section>';
+  }
+
+  // ================= Free Talk =================
+  function renderTalk() {
+    var T = S.talk;
+    var o = '<section class="card stack-s"><h1>Free Talk</h1><p class="small muted">跟同事 Alex 隨便聊，AI 會順手修正你的句子。不算打卡，第一次聊會拿到徽章。</p></section>';
+    if (S.aiState !== 'on') return o + '<div class="note warn">' + h('Free Talk 需要 AI 家教，請到「我」→〈連線設定〉貼上 Gemini key。') + '</div>';
+    if (!T.msgs.length) {
+      o += '<div class="stack-s"><span class="small muted">不知道聊什麼？點一個開頭：</span>' +
+        ['I had a busy week. We had three customer meetings.', 'I tried a new restaurant last weekend.', 'My daughter started learning to swim.', 'I have been reading about WiFi 7 lately.'].map(function (s) {
+          return '<button class="chip" data-act="tInsert" data-text="' + h(s) + '">' + h(s) + '</button>';
+        }).join('') + '</div>';
+    }
+    o += '<section class="chat">';
+    T.msgs.forEach(function (m, idx) {
+      if (m.who === 'partner') o += partnerMsg(m, 'Alex', 't', idx);
+      else {
+        o += '<div class="msg me">' + h(m.text) + '</div>';
+        if (m.correction) o += '<div class="fix"><div><s>' + h(m.correction.original) + '</s></div><div>更自然：<b>' + h(m.correction.fixed) + '</b></div>' + (m.correction.why_zh ? '<div>為什麼：' + h(m.correction.why_zh) + '</div>' : '') + '</div>';
+      }
+    });
+    if (T.busy) o += aiBusy(T, 'Alex is thinking…');
+    o += '</section>' + errBox(T, 'tRetry');
+    if (T.suggestions && T.suggestions.length) o += '<div class="stack-s">' + T.suggestions.map(function (s) { return '<button class="chip" data-act="tInsert" data-text="' + h(s) + '">' + h(s) + '</button>'; }).join('') + '</div>';
+    o += '<textarea id="tIn" data-bind="talk.input" data-enter="tSend" placeholder="Say something… (Enter 送出)" ' + (T.busy ? 'disabled' : '') + '>' + h(T.input) + '</textarea>' +
+      '<div class="row">' + micBtn('t-in', 'talk.input', '', '用說的') + '<button class="btn primary" data-act="tSend" ' + (T.busy ? 'disabled' : '') + '>送出</button>' +
+      (T.msgs.length ? '<button class="btn ghost sm" data-act="tReset">重新開始</button>' : '') + '</div>';
+    return o;
+  }
+  async function talkSend(retry) {
+    var T = S.talk;
+    if (T.busy) return;
+    if (!retry) {
+      var text = (T.input || '').trim();
+      if (!text) { toast('先輸入一句話。'); return; }
+      T.input = ''; T.suggestions = [];
+      T.msgs.push({ who: 'me', text: text });
+      T.count = (T.count || 0) + 1;
+      T.turns.push({ role: 'user', content: '[Learner message ' + T.count + '] ' + text });
+    }
+    var input = [{ role: 'user', content: PROMPTS.freeTalk() }].concat(T.turns.slice(-14));
+    var r = await askJSON(input, { modelTier: 'default', cache: false }, T);
+    if (r != null) {
+      var lastMe = ''; for (var k = T.msgs.length - 1; k >= 0; k--) if (T.msgs[k].who === 'me') { lastMe = T.msgs[k].text; break; }
+      var v = DEC.validateTurn(r, lastMe);
+      if (!v) T.err = { code: 'invalid_json', msg: aiErrMsg('invalid_json') };
+      else {
+        for (var i = T.msgs.length - 1; i >= 0; i--) if (T.msgs[i].who === 'me') { T.msgs[i].correction = v.correction; break; }
+        T.msgs.push({ who: 'partner', text: v.reply, veil: S.cfg.listenFirst });
+        autoSay(v.reply);
+        T.turns.push({ role: 'assistant', content: JSON.stringify(v) });
+        T.suggestions = v.suggestions;
+        if (DEC.addBadge(S.profile, 'talk1')) { saveProfile(); toast('獲得徽章：第一次 Free Talk'); }
+      }
+    }
+    render(); focusSoon('tIn');
+  }
+
+  // ================= Me：連線設定（Gemini key、GitHub token、AI 模型、聽力） =================
+  function connLight(c) {
+    var map = { none: ['', '未設定'], set: ['', '已設定，尚未測試'], testing: ['', '測試中…'], ok: ['on', '可用'], err: ['err', '錯誤'] };
+    var x = map[c.state] || map.none;
+    return '<span class="pill ' + x[0] + '" role="status"><span class="dot"></span><span>' + x[1] + '</span></span>' +
+      (c.state === 'err' && c.msg ? '<div class="note bad small">' + h(c.msg) + '</div>' : '');
+  }
+  function renderConn() {
+    var c = S.cfg, g = S.conn.gemini, gh = S.conn.github;
+    var mode = '目前：AI ＝ ' + (c.geminiKey ? 'AI 家教（Gemini）' : '自評模式（沒有 Gemini key）') + '；進度 ＝ ' + (c.githubToken ? '跨裝置同步（私人 Gist）' : '只存在這台裝置');
+    var o = '<section class="card stack" id="connSec" aria-label="連線設定"><h2>連線設定</h2><div class="note info small">' + h(mode) + '</div>';
+    // Gemini
+    o += '<div class="conn"><div class="row between"><label for="cfgGemini"><b>Gemini API key</b>（AI 家教）</label>' + connLight(g) + '</div>' +
+      '<input type="password" id="cfgGemini" data-bind="cfgDraft.geminiKey" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="' + (c.geminiKey ? '已設定（要換才需要重貼）' : '貼上 Gemini API key') + '" value="' + h(S.cfgDraft.geminiKey) + '">' +
+      '<span class="small muted">怎麼拿：aistudio.google.com → Get API key → Create API key，複製貼上（免費層即可）。</span>' +
+      '<div class="row"><button class="btn sm primary" data-act="cfgSaveGemini">' + (c.geminiKey && !S.cfgDraft.geminiKey ? '測試' : '儲存並測試') + '</button>' +
+      (c.geminiKey ? '<button class="btn sm ghost" data-act="cfgClearGemini">清除 key</button>' : '') + '</div>' +
+      '<label class="small" for="cfgModel">AI 模型（角色扮演、總結、自訂情境用；開口練習的判定固定用 flash-lite）</label>' +
+      '<select id="cfgModel" data-act-change="setModel">' + DEC.MODEL_CHOICES.map(function (m, i) {
+        return '<option value="' + h(m) + '" ' + (m === c.model ? 'selected' : '') + '>' + h(m) + (i === 0 ? '（預設）' : '') + '</option>';
+      }).join('') + '</select></div>';
+    // GitHub
+    o += '<div class="conn"><div class="row between"><label for="cfgGithub"><b>GitHub token</b>（跨裝置同步）</label>' + connLight(gh) + '</div>' +
+      '<input type="password" id="cfgGithub" data-bind="cfgDraft.githubToken" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="' + (c.githubToken ? '已設定（要換才需要重貼）' : '貼上 GitHub token') + '" value="' + h(S.cfgDraft.githubToken) + '">' +
+      '<span class="small muted">怎麼拿：GitHub → Settings → Developer settings → Personal access tokens → Tokens (classic) → Generate，只勾 <b>gist</b>。進度存在你的私人 Gist，第二台裝置貼同一把 token 就會接上。</span>' +
+      (c.gistId ? '<span class="small muted">進度檔：私人 Gist ' + h(c.gistId.slice(0, 8)) + '…</span>' : '') +
+      (S.sync === 'err' && S.syncMsg && gh.state !== 'err' ? '<div class="note warn small">' + h(S.syncMsg) + '</div>' : '') +
+      '<div class="row"><button class="btn sm primary" data-act="cfgSaveGithub">' + (c.githubToken && !S.cfgDraft.githubToken ? '立即同步' : '儲存並測試') + '</button>' +
+      (c.githubToken ? '<button class="btn sm ghost" data-act="cfgClearGithub">清除 token</button>' : '') + '</div></div>';
+    // 聽力
+    o += '<div class="stack-s"><span class="small"><b>聽力</b></span><div class="row">' +
+      '<button class="btn sm ' + (c.autoSpeak ? 'on' : '') + '" data-act="cfgToggle" data-k="autoSpeak" aria-pressed="' + c.autoSpeak + '">自動朗讀 AI 回覆：' + (c.autoSpeak ? '開' : '關') + '</button>' +
+      '<button class="btn sm ' + (c.listenFirst ? 'on' : '') + '" data-act="cfgToggle" data-k="listenFirst" aria-pressed="' + c.listenFirst + '">先聽再看：' + (c.listenFirst ? '開' : '關') + '</button></div>' +
+      '<span class="small muted">「先聽再看」開著時，對方的回覆先模糊顯示，聽懂了再點文字打開，可以按重播。</span></div>';
+    if (S.micMsg) o += '<div class="note warn small">' + h(S.micMsg) + '</div>';
+    o += '<p class="small muted">key 與 token 只存在這台裝置的瀏覽器裡，不會寫進 Gist、網址或任何紀錄。</p></section>';
+    return o;
+  }
+
+  // ================= Me =================
+  function renderMe() {
+    var p = S.profile;
+    var o = '<section class="card stack"><h1>我的紀錄</h1><div class="stats">' +
+      '<div class="stat"><span class="small muted">目前連續</span><b>' + DEC.streakStatus(p, today()).effective + '</b></div>' +
+      '<div class="stat"><span class="small muted">最長連續</span><b>' + p.longest + '</b></div>' +
+      '<div class="stat"><span class="small muted">累計完成</span><b>' + p.totalDays + '</b></div>' +
+      '<div class="stat"><span class="small muted">凍結卡</span><b>' + p.freezes + '<span class="small muted"> / 2</span></b></div>' +
+      '</div></section>';
+    o += '<section class="card stack"><h2>訊號小鳥圖鑑</h2><p class="small muted">累計完成 1、3、7、14、21、30、45、60、90、120 天各升一級。</p><div class="levels">';
+    for (var L = 1; L <= 10; L++) o += '<div class="' + (p.level >= L ? '' : 'lock') + '">' + birdSVG(L) + '<div>Lv' + L + '<br>' + (p.level >= L ? h(LEVEL_NAMES[L]) : DEC.LEVELS[L - 1] + ' 天') + '</div></div>';
+    o += '</div></section>';
+    o += '<section class="card stack"><h2>徽章</h2><div class="badges">' + BADGES.map(function (b) {
+      var got = p.badges.indexOf(b.id) >= 0;
+      return '<div class="badge ' + (got ? 'got' : 'lock') + '"><b>' + h(b.name) + '</b><div class="small muted">' + (got ? '已獲得' : h(b.desc)) + '</div></div>';
+    }).join('') + '</div></section>';
+    o += renderConn();
+    // 設定
+    var voices = [];
+    try { voices = ('speechSynthesis' in window ? speechSynthesis.getVoices() : []).filter(function (v) { return /^en/i.test(v.lang); }); } catch (e) {}
+    o += '<section class="card stack"><h2>設定</h2>' +
+      '<div class="stack-s"><span class="small">朗讀速度</span><div class="row">' + [0.8, 1.0].map(function (s) { return '<button class="btn sm ' + (p.settings.speed === s ? 'on' : '') + '" data-act="setSpeed" data-v="' + s + '" aria-pressed="' + (p.settings.speed === s) + '">' + (s === 0.8 ? '慢 0.8×' : '正常 1.0×') + '</button>'; }).join('') + playBtn('Let me walk you through this week\'s test results.', '試聽') + '</div></div>' +
+      '<div class="stack-s"><span class="small">作答方式</span><div class="row">' +
+        '<button class="btn sm ' + (p.settings.mode === 'voice' ? 'on' : '') + '" data-act="setMode" data-v="voice">語音＋打字</button>' +
+        '<button class="btn sm ' + (p.settings.mode === 'text' ? 'on' : '') + '" data-act="setMode" data-v="text">只打字</button></div>' +
+        (!SR ? '<span class="small muted">這個瀏覽器沒有語音辨識，只能打字（電腦版 Chrome 才有）。</span>' : S.micBlocked ? '<span class="small muted">麥克風被擋住了，目前只能打字。</span>' : '') + '</div>' +
+      (voices.length ? '<div class="stack-s"><label class="small" for="voiceSel">朗讀聲音</label><select id="voiceSel" data-act-change="setVoice"><option value="">自動（en-US）</option>' + voices.map(function (v) { return '<option value="' + h(v.name) + '" ' + (v.name === p.settings.voice ? 'selected' : '') + '>' + h(v.name + ' · ' + v.lang) + '</option>'; }).join('') + '</select></div>' : '') +
+      '</section>';
+    o += '<section class="card stack-s"><h2>資料</h2><p class="small muted">' + (S.cfg.githubToken ? '進度存在你的私人 Gist（只有你的 GitHub 帳號看得到），手機和電腦會同步；這台裝置也留一份。' : '進度只存在這台裝置的瀏覽器裡。在〈連線設定〉貼上 GitHub token 後會自動跨裝置同步。') + '</p>' +
+      (S.confirmReset ? '<div class="note bad stack-s"><span>確定要清除這台裝置上的資料嗎？' + (S.cfg.githubToken ? '雲端那份不會刪，下次開啟會再同步回來。' : '清除後無法復原。') + '</span><div class="row"><button class="btn sm" data-act="resetYes">確定清除</button><button class="btn sm ghost" data-act="resetNo">取消</button></div></div>' :
+        '<div><button class="btn sm" data-act="resetAsk">清除這台裝置的資料</button></div>') + '</section>';
+    return o;
+  }
+
+  // ================= 繪製 =================
+  function paintPills() {
+    var ai = $('aiPill'), sy = $('syncPill');
+    if (ai) {
+      var bad = S.aiState === 'on' && S.conn.gemini.state === 'err';
+      ai.className = 'pill ' + (bad ? 'err' : S.aiState === 'on' ? 'on' : '');
+      ai.lastChild.textContent = bad ? 'AI key 有問題' : S.aiState === 'on' ? 'AI 家教' : '自評模式';
+    }
+    if (sy) {
+      sy.className = 'pill ' + (S.sync === 'ok' ? 'on' : S.sync === 'err' ? 'err' : '');
+      sy.lastChild.textContent = S.sync === 'ok' ? '已同步' : S.sync === 'syncing' ? '同步中' : S.sync === 'err' ? '同步失敗·已存本機' : '本機';
+    }
+    var bb = $('brandBird'); if (bb) bb.innerHTML = birdSVG(S.profile.level);
+  }
+  function paintNav() {
+    var tabs = [['today', '今天', I.today], ['review', '複習', I.review], ['talk', 'Talk', I.talk], ['me', '我', I.me]];
+    $('nav').innerHTML = tabs.map(function (x) {
+      return '<button class="navb ' + (S.tab === x[0] ? 'act' : '') + '" data-act="tab" data-tab="' + x[0] + '" aria-current="' + (S.tab === x[0] ? 'page' : 'false') + '">' + x[2] + '<span>' + x[1] + '</span></button>';
+    }).join('');
+  }
+  function render() {
+    // 記住焦點與游標，重繪後還原（避免打字到一半跳掉）
+    var ae = document.activeElement, fid = ae && ae.id, sel = null;
+    if (fid && (ae.tagName === 'TEXTAREA' || ae.tagName === 'INPUT')) { try { sel = [ae.selectionStart, ae.selectionEnd]; } catch (e) {} }
+    var html;
+    if (S.tab === 'today') html = S.view === 'lesson' && S.lesson ? renderLesson() : S.view === 'done' && S.lastDone ? renderDone() : renderHome();
+    else if (S.tab === 'review') html = renderReview();
+    else if (S.tab === 'talk') html = renderTalk();
+    else html = renderMe();
+    $('main').innerHTML = '<div class="stack">' + html + '</div>';
+    paintNav(); paintPills();
+    if (fid) { var el = $(fid); if (el && !el.disabled) { el.focus(); if (sel) try { el.setSelectionRange(sel[0], sel[1]); } catch (e) {} } }
+  }
+  // 聚焦並把輸入框捲進畫面（AI 回覆後對話變長，否則建議回覆與輸入框會在畫面外）
+  function focusSoon(id) { setTimeout(function () { var el = $(id); if (!el) return; if (!el.disabled) el.focus({ preventScroll: true }); try { el.scrollIntoView({ block: 'end', behavior: 'smooth' }); } catch (e) { el.scrollIntoView(false); } }, 0); }
+
+  // ================= 事件 =================
+  var ACT = {
+    tab: function (el) { stopMic(); S.tab = el.dataset.tab; if (S.tab === 'today' && S.view === 'done') S.view = 'home'; S.confirmReset = false; window.scrollTo(0, 0); },
+    home: function () { stopMic(); S.view = 'home'; window.scrollTo(0, 0); },
+    startLesson: function () { openLesson(); window.scrollTo(0, 0); },
+    swap: function () {
+      var t = today(), cur = scenarioFor(t), type = DEC.isWeekend(t) ? 'daily' : 'work';
+      var list = LIB.filter(function (s) { return s.type === type; });
+      var idx = list.findIndex(function (s) { return s.id === cur.id; });
+      var next = list[(idx + 1) % list.length];
+      var d = ensureDay(t); d.scenarioId = next.id; delete d.custom; delete d.title;
+      saveDay(t);
+    },
+    toggleCustom: function () { S.showCustom = !S.showCustom; },
+    makeCustom: async function () {
+      var desc = (S.customText || '').trim();
+      if (desc.length < 4) { toast('請多描述一點場合。'); return; }
+      var t = today(), id = 'cu-' + t.replace(/-/g, '') + '-' + Date.now().toString(36);
+      var r = await askJSON(PROMPTS.custom(desc.slice(0, 500)), { modelTier: 'default', cache: false }, S.customJob);
+      if (r != null) {
+        var v = DEC.validateScenario(r, id);
+        if (!v) S.customJob.err = { code: 'invalid_json', msg: '產生的課程不完整，請按「再試一次」。' };
+        else {
+          var d = ensureDay(t); d.scenarioId = id; d.custom = v; d.title = v.title + '（' + v.titleZh + '）';
+          saveDay(t);
+          S.showCustom = false; S.customText = '';
+          if (DEC.addBadge(S.profile, 'custom1')) { saveProfile(); toast('獲得徽章：第一次自訂情境'); }
+        }
+      }
+      render();
+    },
+    calPrev: function () { S.calOffset--; S.calSel = null; },
+    calNext: function () { if (S.calOffset < 0) S.calOffset++; S.calSel = null; },
+    calDay: function (el) { S.calSel = S.calSel === el.dataset.date ? null : el.dataset.date; },
+    goStep: function (el) { stopMic(); S.lesson.step = el.dataset.step; },
+    next: function () { nextStep(); },
+    speak: function (el) { speak(el.dataset.text); return false; },
+    mic: function (el) { startMic(el.dataset.key, el.dataset.path, el.dataset.compare); return false; },
+    stopai: function () { if (activeCtl) activeCtl.abort(); return false; },
+    // Warm-up
+    warmSkip: function () { markStep('warm'); nextStep(); },
+    warmShow: function () { S.lesson.warm.shown = true; },
+    warmGrade: function (el) {
+      var w = S.lesson.warm, id = w.ids[w.i], t = today();
+      S.chunks[id] = DEC.srsUpdate(S.chunks[id], el.dataset.ok === '1', t); saveChunk(id);
+      w.i++; w.shown = false;
+      if (w.i >= w.ids.length) markStep('warm');
+    },
+    // Learn
+    star: function (el) {
+      var scn = S.lesson.scn, i = +el.dataset.i, id = chunkId(scn, i);
+      if (S.chunks[id]) { delete S.chunks[id]; } else { S.chunks[id] = DEC.newChunk(scn.chunks[i], scn.id, today()); }
+      saveChunk(id);
+    },
+    learnDone: function () { stopMic(); markStep('learn'); nextStep(); },
+    // Practice
+    pSubmit: function () { practiceSubmit(); return false; },
+    pReveal: function () { S.lesson.practice.result = { ok: null, self: true, better: '', note_zh: '' }; },
+    pSelf: function (el) {
+      var p = S.lesson.practice, ok = el.dataset.ok === '1';
+      p.result = { ok: ok, self: true, better: S.lesson.scn.drills[p.i].en, note_zh: '' };
+      if (ok) p.oks++;
+    },
+    pRound: function (el) {
+      var p = S.lesson.practice; p.round = +el.dataset.r;
+      if (p.round === 2) speak((p.result && p.result.better) || S.lesson.scn.drills[p.i].en);
+    },
+    pCheck3: function () {
+      var p = S.lesson.practice, ref = (p.result && p.result.better) || S.lesson.scn.drills[p.i].en;
+      if (!(p.r3 || '').trim()) { toast('先說或打出整句。'); return false; }
+      p.r3res = Math.max(DEC.wordSimilarity(p.r3, ref), DEC.wordSimilarity(p.r3, S.lesson.scn.drills[p.i].en)) || 1;
+    },
+    pNextDrill: function () { stopMic(); practiceNextDrill(); },
+    // Apply
+    insert: function (el) {
+      var a = S.lesson.apply, t = el.dataset.text;
+      a.input = el.dataset.replace ? t : ((a.input || '').trim() ? a.input.replace(/\s+$/, '') + ' ' + t : t);
+      focusSoon('aIn');
+    },
+    aStart: function () {
+      var a = S.lesson.apply; warmSpeech(); a.started = true;
+      if (S.cfg.listenFirst && a.msgs[0]) a.msgs[0].veil = true;
+      if (a.msgs[0]) autoSay(a.msgs[0].text);
+      focusSoon('aIn');
+    },
+    unveil: function (el) {
+      var list = el.dataset.src === 't' ? S.talk.msgs : (S.lesson && S.lesson.apply.msgs) || [];
+      var m = list[+el.dataset.i]; if (m) m.veil = false;
+    },
+    aSend: function () { warmSpeech(); applySend(false); return false; },
+    aRetry: function () { applySend(true); return false; },
+    aEnd: function () { S.lesson.apply.done = true; },
+    aSummary: function () { applySummary(); return false; },
+    selfScore: function (el) { S.lesson.apply.selfScore = +el.dataset.n; },
+    finish: function () { stopMic(); finishLesson(); },
+    copyShare: function () {
+      var txt = shareText(), box = $('shareBox');
+      var fallback = function () { if (box) { box.focus(); box.select(); } toast('已選取文字，請手動複製。'); };
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(function () { toast('已複製'); }, fallback);
+        else fallback();
+      } catch (e) { fallback(); }
+      return false;
+    },
+    // Review
+    revList: function () { S.rev.mode = 'list'; },
+    revMatch: function () { S.rev.mode = 'match'; S.rev.match = newMatch(); },
+    revMake: function () {
+      var ids = Object.keys(S.chunks); if (!ids.length) return;
+      var due = DEC.pickDue(S.chunks, today(), 5), pool = due.length ? due : ids;
+      var prev = S.rev.make && S.rev.make.id;
+      var cand = pool.filter(function (x) { return x !== prev; }); if (!cand.length) cand = pool;
+      S.rev.mode = 'make'; S.rev.make = { id: cand[Math.floor(Math.random() * cand.length)], input: '', res: null };
+    },
+    revDel: function (el) { var id = el.dataset.id; delete S.chunks[id]; saveChunk(id); },
+    mEn: function (el) { S.rev.match.selEn = el.dataset.id; S.rev.match.wrong = null; },
+    mZh: function (el) {
+      var m = S.rev.match, z = el.dataset.id;
+      if (!m.selEn) { toast('先點左邊的英文。'); return false; }
+      if (m.selEn === z) {
+        m.ok.push(z); m.selEn = null; m.wrong = null;
+        S.chunks[z] = DEC.srsUpdate(S.chunks[z], !m.miss[z], today()); saveChunk(z);
+      } else { m.wrong = z; m.miss[m.selEn] = true; }
+    },
+    mkCheck: function () {
+      var mk = S.rev.make, c = S.chunks[mk.id];
+      if (!(mk.input || '').trim()) { toast('先寫一句。'); return false; }
+      mk.res = DEC.chunkUsed(mk.input, c.en);
+      if (mk.res) { S.chunks[mk.id] = DEC.srsUpdate(c, true, today()); saveChunk(mk.id); }
+    },
+    // Talk
+    tInsert: function (el) { S.talk.input = el.dataset.text; focusSoon('tIn'); },
+    tSend: function () { warmSpeech(); talkSend(false); return false; },
+    tRetry: function () { talkSend(true); return false; },
+    tReset: function () { S.talk = { msgs: [], turns: [], input: '', busy: false, err: null }; },
+    // Me
+    setSpeed: function (el) { S.profile.settings.speed = +el.dataset.v; saveProfile(); },
+    setMode: function (el) { S.profile.settings.mode = el.dataset.v; stopMic(); saveProfile(); },
+    // 連線設定：貼上的 key 先放 cfgDraft，按「儲存並測試」才寫進 dec_v1_cfg
+    cfgSaveGemini: function () {
+      var v = (S.cfgDraft.geminiKey || '').trim();
+      if (v) { S.cfg.geminiKey = v; S.cfgDraft.geminiKey = ''; saveCfg(); S.conn.gemini = { state: 'set', msg: '' }; }
+      refreshAiState(); testGemini(); return false;
+    },
+    cfgClearGemini: function () { S.cfg.geminiKey = ''; S.cfgDraft.geminiKey = ''; saveCfg(); refreshAiState(); },
+    cfgSaveGithub: function () {
+      var v = (S.cfgDraft.githubToken || '').trim();
+      if (v) { if (v !== S.cfg.githubToken) S.cfg.gistId = ''; S.cfg.githubToken = v; S.cfgDraft.githubToken = ''; saveCfg(); S.conn.github = { state: 'set', msg: '' }; }
+      refreshAiState(); testGithub(); return false;
+    },
+    cfgClearGithub: function () { S.cfg.githubToken = ''; S.cfg.gistId = ''; S.cfgDraft.githubToken = ''; saveCfg(); refreshAiState(); setSync('local'); },
+    cfgToggle: function (el) { var k = el.dataset.k; if (k === 'autoSpeak' || k === 'listenFirst') { S.cfg[k] = !S.cfg[k]; saveCfg(); if (k === 'autoSpeak' && S.cfg.autoSpeak) warmSpeech(); } },
+    resetAsk: function () { S.confirmReset = true; },
+    resetNo: function () { S.confirmReset = false; },
+    resetYes: function () {
+      try { Object.keys(KEY).forEach(function (k) { localStorage.removeItem(KEY[k]); }); } catch (e) {}
+      mem = {};
+      S.profile = DEC.normalizeProfile(null); S.days = {}; S.chunks = {}; S.confirmReset = false; S.lastDone = null; S.view = 'home';
+      toast('這台裝置的資料已清除。');
+    }
+  };
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-act]');
+    if (!el || el.disabled) return;
+    var fn = ACT[el.dataset.act];
+    if (!fn) return;
+    var r = fn(el, e);
+    if (r !== false && !(r && typeof r.then === 'function')) render();
+  });
+  document.addEventListener('input', function (e) {
+    var b = e.target.dataset && e.target.dataset.bind;
+    if (b) setPath(b, e.target.value);
+  });
+  document.addEventListener('change', function (e) {
+    if (e.target.dataset && e.target.dataset.actChange === 'setModel') { S.cfg.model = DEC.normalizeCfg({ model: e.target.value }).model; saveCfg(); return; }
+    if (e.target.dataset && e.target.dataset.actChange === 'setVoice') { S.profile.settings.voice = e.target.value; saveProfile(); speak('Hello, this is my voice.'); }
+  });
+  document.addEventListener('keydown', function (e) {
+    var t = e.target;
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && t.dataset && t.dataset.enter) {
+      e.preventDefault(); var fn = ACT[t.dataset.enter]; if (fn) fn(t, e);
+    }
+  });
+  if ('speechSynthesis' in window) { try { speechSynthesis.onvoiceschanged = function () { if (S.tab === 'me') render(); }; } catch (e) {} }
+  // 跨過午夜回到頁面時重畫首頁（日期換了）
+  var lastDay = today();
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible') {
+      if (today() !== lastDay) { lastDay = today(); if (S.view !== 'lesson') { S.view = 'home'; render(); } }
+      // 回到前景：距上次同步超過 60 秒就再同步一次（另一台裝置可能剛做完）
+      if (S.cfg.githubToken && Date.now() - SY.lastSync > 60000) syncNow();
+    } else if (SY.dirty) {
+      syncNow(); // 要切走了，還沒寫上去的先送出
+    }
+  });
+
+  // 先畫首頁，再（有 token 時）同步一次
+  refreshAiState();
+  render();
+  if (S.cfg.githubToken) syncNow();
+})();
+</script>
+
+</body>
+</html>
